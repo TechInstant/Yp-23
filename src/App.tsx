@@ -8,6 +8,7 @@ import Directory from './pages/Directory'
 import Home from './pages/Home'
 import RegisterParish from './pages/RegisterParish'
 import SubmitAttendance from './pages/SubmitAttendance'
+import AdminsAdmin from './pages/admin/AdminsAdmin'
 import AttendanceAdmin from './pages/admin/AttendanceAdmin'
 import Dashboard from './pages/admin/Dashboard'
 import Login from './pages/admin/Login'
@@ -82,6 +83,7 @@ export default function App() {
           <Route path="parishes" element={<ParishesAdmin />} />
           <Route path="parishes/:parishId" element={<ParishDetail />} />
           <Route path="attendance" element={<AttendanceAdmin />} />
+          <Route path="admins" element={<AdminsAdmin />} />
         </Route>
       </Route>
 

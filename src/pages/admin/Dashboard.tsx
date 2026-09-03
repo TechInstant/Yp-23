@@ -156,13 +156,13 @@ export default function Dashboard() {
             ))}
           </div>
           {view === 'sundays' && (
-            <div className="flex rounded-lg border border-navy-200 bg-white p-1">
+            <div className="flex max-w-full overflow-x-auto rounded-lg border border-navy-200 bg-white p-1">
               {RANGE_PRESETS.map((p) => (
                 <button
                   key={p.key}
                   type="button"
                   onClick={() => setPreset(p.key)}
-                  className={`rounded-md px-3 py-1.5 text-xs font-semibold transition ${
+                  className={`shrink-0 whitespace-nowrap rounded-md px-3 py-1.5 text-xs font-semibold transition ${
                     preset === p.key ? 'bg-navy-900 text-white' : 'text-navy-600 hover:bg-navy-50'
                   }`}
                 >

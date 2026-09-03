@@ -12,6 +12,11 @@ const NAV = [
   },
   { to: '/admin/parishes', label: 'Parishes', icon: 'M4 20V9l6-4 6 4v11M9 20v-5h4v5' },
   { to: '/admin/attendance', label: 'Attendance', icon: 'M4 5h14M4 10h14M4 15h9' },
+  {
+    to: '/admin/admins',
+    label: 'Admin access',
+    icon: 'M12 3l7 4v5c0 4.4-3 8-7 9-4-1-7-4.6-7-9V7z',
+  },
 ]
 
 function navClass({ isActive }: { isActive: boolean }) {

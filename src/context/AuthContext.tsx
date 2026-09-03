@@ -7,28 +7,68 @@ import {
   type ReactNode,
 } from 'react'
 import {
+  createUserWithEmailAndPassword,
   onAuthStateChanged,
+  sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signOut,
   type User,
 } from 'firebase/auth'
-import { doc, getDoc } from 'firebase/firestore'
+import { deleteDoc, doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore'
 import { auth, COLLECTIONS, db } from '../lib/firebase'
+
+export type AdminRole = 'super' | 'admin'
 
 interface AuthState {
   user: User | null
-  /** True only when the signed-in uid has a doc in `admins`. */
+  /** True when the signed-in uid has a doc in `admins`. */
   isAdmin: boolean
+  /** Super admins can grant and revoke access; plain admins cannot. */
+  isSuperAdmin: boolean
+  role: AdminRole | null
   loading: boolean
   signIn: (email: string, password: string) => Promise<void>
+  signUp: (email: string, password: string) => Promise<void>
+  resetPassword: (email: string) => Promise<void>
   logout: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthState | null>(null)
 
+/**
+ * Turns a pending invitation into real admin access.
+ *
+ * A browser cannot look a user up by email, so access cannot be granted *to*
+ * someone directly — instead a super admin files an invitation under their
+ * email and the invitee redeems it here, on their first sign-in. The role comes
+ * from the invitation and is re-checked by firestore.rules, so redeeming an
+ * invitation cannot award more than was offered.
+ */
+async function redeemInvite(user: User): Promise<AdminRole | null> {
+  const email = user.email?.trim().toLowerCase()
+  if (!email) return null
+
+  const inviteRef = doc(db, COLLECTIONS.adminInvites, email)
+  const invite = await getDoc(inviteRef)
+  if (!invite.exists()) return null
+
+  const role: AdminRole = invite.data().role === 'super' ? 'super' : 'admin'
+  await setDoc(doc(db, COLLECTIONS.admins, user.uid), {
+    email,
+    role,
+    grantedAt: serverTimestamp(),
+    grantedBy: invite.data().invitedBy ?? '',
+  })
+
+  // Spent invitations are cleared so the list only ever shows what is still
+  // outstanding. Failure here is harmless — the admin record already exists.
+  await deleteDoc(inviteRef).catch(() => undefined)
+  return role
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
-  const [isAdmin, setIsAdmin] = useState(false)
+  const [role, setRole] = useState<AdminRole | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -41,10 +81,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(false)
       return
     }
+
     return onAuthStateChanged(auth, async (next) => {
       setUser(next)
       if (!next) {
-        setIsAdmin(false)
+        setRole(null)
         setLoading(false)
         return
       }
@@ -52,9 +93,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Firestore rules enforce this too; the check here is only so the UI can
         // say "not an admin" instead of showing an empty dashboard.
         const snap = await getDoc(doc(db, COLLECTIONS.admins, next.uid))
-        setIsAdmin(snap.exists())
+        if (snap.exists()) {
+          // An admin record written by hand in the Firebase console has no
+          // role. Treat it as super, matching isSuperAdmin() in the rules —
+          // otherwise the very first admin could never manage anyone else.
+          setRole(snap.data().role === 'admin' ? 'admin' : 'super')
+        } else {
+          setRole(await redeemInvite(next))
+        }
       } catch {
-        setIsAdmin(false)
+        setRole(null)
       } finally {
         setLoading(false)
       }
@@ -64,18 +112,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const value = useMemo<AuthState>(
     () => ({
       user,
-      isAdmin,
+      isAdmin: role !== null,
+      isSuperAdmin: role === 'super',
+      role,
       loading,
       signIn: async (email, password) => {
         if (!auth) throw new Error('Firebase is not configured in this build.')
         await signInWithEmailAndPassword(auth, email.trim(), password)
+      },
+      signUp: async (email, password) => {
+        if (!auth) throw new Error('Firebase is not configured in this build.')
+        await createUserWithEmailAndPassword(auth, email.trim(), password)
+      },
+      resetPassword: async (email) => {
+        if (!auth) throw new Error('Firebase is not configured in this build.')
+        await sendPasswordResetEmail(auth, email.trim())
       },
       logout: async () => {
         if (!auth) return
         await signOut(auth)
       },
     }),
-    [user, isAdmin, loading],
+    [user, role, loading],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

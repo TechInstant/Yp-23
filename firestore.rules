@@ -34,6 +34,31 @@ service cloud.firestore {
       return isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
     }
 
+    /**
+     * Super admins are the only ones who can grant or revoke admin access.
+     *
+     * An admin document with no `role` field defaults to super: the only way to
+     * get one before this feature existed was by hand in the Firebase console,
+     * which means the project owner created it. Defaulting those to plain admin
+     * would lock the province out of its own admin list.
+     */
+    function isSuperAdmin() {
+      return isAdmin()
+        && get(/databases/$(database)/documents/admins/$(request.auth.uid))
+             .data.get('role', 'super') == 'super';
+    }
+
+    /** The signed-in user's email, lowercased — the id an invite is filed under. */
+    function myEmail() {
+      return isSignedIn() && request.auth.token.email != null
+        ? request.auth.token.email.lower()
+        : '';
+    }
+
+    function invitePath(email) {
+      return /databases/$(database)/documents/adminInvites/$(email);
+    }
+
     function incoming() {
       return request.resource.data;
     }
@@ -48,9 +73,50 @@ service cloud.firestore {
     }
 
     match /admins/{uid} {
-      // An admin may read the allow-list; nobody may edit it from a browser.
       allow read: if isAdmin();
-      allow write: if false;
+
+      /**
+       * Self-claim against an invitation.
+       *
+       * A browser cannot look a user up by email — that needs the Admin SDK,
+       * and this project has no service-account key (the organisation policy
+       * blocks creating one). So access is granted the other way round: a super
+       * admin files an invitation under the invitee's email, the invitee signs
+       * up themselves, and this rule lets them convert that invitation into an
+       * admin record for their own uid and no one else's.
+       *
+       * The role is read from the invitation rather than trusted from the
+       * client, so an invitee cannot promote themselves to super.
+       */
+      allow create: if isSignedIn()
+                    && uid == request.auth.uid
+                    && myEmail() != ''
+                    && exists(invitePath(myEmail()))
+                    && incoming().keys().hasOnly(['email', 'role', 'grantedAt', 'grantedBy'])
+                    && incoming().email == myEmail()
+                    && incoming().role == get(invitePath(myEmail())).data.role
+                    && incoming().grantedAt == request.time;
+
+      // Changing or removing someone else's access is a super-admin action.
+      // Touching your own record is refused outright, so a super admin cannot
+      // demote or delete themselves and strand the province with no one able
+      // to manage the list.
+      allow update, delete: if isSuperAdmin() && uid != request.auth.uid;
+    }
+
+    match /adminInvites/{inviteId} {
+      // An invitee may read and clear their own invitation; admins see them all.
+      allow read: if isAdmin() || (myEmail() != '' && inviteId == myEmail());
+
+      allow create, update: if isSuperAdmin()
+                            && inviteId == incoming().email
+                            && incoming().keys().hasOnly(['email', 'role', 'invitedBy', 'createdAt'])
+                            && incoming().email is string
+                            && incoming().email.matches('^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$')
+                            && incoming().email == incoming().email.lower()
+                            && incoming().role in ['super', 'admin'];
+
+      allow delete: if isSuperAdmin() || (myEmail() != '' && inviteId == myEmail());
     }
 
     match /parishes/{parishId} {

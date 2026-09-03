@@ -83,4 +83,5 @@ export const COLLECTIONS = {
   parishContacts: 'parishContacts',
   attendance: 'attendance',
   admins: 'admins',
+  adminInvites: 'adminInvites',
 } as const

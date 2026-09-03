@@ -1,15 +1,4 @@
 import lockup from './YP23.jpg'
-
-/**
- * The official Youth Province 23 lockup. The artwork already carries the RCCG
- * seal, the Young Adults & Youths crest and the words "YOUTH PROVINCE 23", so
- * the component never repeats the province name in text beside it — only the
- * "Attendance Portal" subtitle, which the artwork does not contain.
- *
- * The file has a white background, so on the navy surfaces (admin sidebar,
- * login screen) it sits on a white chip rather than floating as a pale block.
- */
-
 const SIZES = {
   sm: { mark: 34, sub: 'text-[10px]' },
   md: { mark: 44, sub: 'text-[11px]' },

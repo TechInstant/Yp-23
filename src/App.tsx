@@ -28,12 +28,22 @@ export default function App() {
             ))}
           </ul>
           <p className="mt-3">
-            Locally: copy <code>.env.example</code> to <code>.env</code> and fill it in. On
-            Render: add them under Environment, then trigger a new deploy — Vite bakes them in
-            at build time, so restarting alone will not pick them up.
+            <strong>Locally:</strong> copy <code>.env.example</code> to <code>.env</code>, fill
+            it in, and restart <code>npm run dev</code>.
           </p>
           <p className="mt-3">
-            Paste the values bare — no quotes and no trailing comma:{' '}
+            <strong>On Vercel:</strong> Settings → Environment Variables. Add each one with{' '}
+            <strong>Production ticked</strong>, then Deployments → ⋯ → Redeploy with{' '}
+            <em>Use existing Build Cache</em> switched <strong>off</strong>.
+          </p>
+          <p className="mt-3">
+            Vite compiles these into the bundle at <strong>build</strong> time, so a deployment
+            built before the variables were saved will never see them no matter how often it is
+            restarted — it has to be rebuilt. All six missing at once almost always means they
+            were added to a different project, or saved after this build ran.
+          </p>
+          <p className="mt-3">
+            Paste the values bare — no quotes, no trailing comma, no spaces:{' '}
             <code>VITE_FIREBASE_API_KEY=AIzaSy…</code>
           </p>
         </Alert>

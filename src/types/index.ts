@@ -1,10 +1,37 @@
-export type Family = 'IFE' | 'EDE'
+/**
+ * "Location" is the top-level split of the province — Ife and Ede. The two
+ * source documents call these "families"; the province uses "location" on the
+ * forms, so that is the word the interface uses everywhere.
+ */
+export type LocationCode = 'IFE' | 'EDE'
 
-export const FAMILIES: Family[] = ['IFE', 'EDE']
+export const LOCATIONS: LocationCode[] = ['IFE', 'EDE']
 
-export const FAMILY_LABEL: Record<Family, string> = {
-  IFE: 'Ife Family',
-  EDE: 'Ede Family',
+export const LOCATION_LABEL: Record<LocationCode, string> = {
+  IFE: 'Ife',
+  EDE: 'Ede',
+}
+
+/**
+ * What a church is within the province structure. One church can hold all
+ * three roles at once — the zone headquarters is also an area headquarters and
+ * a parish — so this records the *highest* role it holds, and a zonal pastor
+ * submitting for his own church picks ZONE.
+ */
+export type ChurchCategory = 'ZONE' | 'AREA' | 'PARISH'
+
+export const CATEGORIES: ChurchCategory[] = ['ZONE', 'AREA', 'PARISH']
+
+export const CATEGORY_LABEL: Record<ChurchCategory, string> = {
+  ZONE: 'Zonal church',
+  AREA: 'Area church',
+  PARISH: 'Parish',
+}
+
+export const CATEGORY_SHORT: Record<ChurchCategory, string> = {
+  ZONE: 'Zone',
+  AREA: 'Area',
+  PARISH: 'Parish',
 }
 
 export type ParishStatus = 'active' | 'pending' | 'archived'
@@ -15,9 +42,10 @@ export interface Parish {
   name: string
   pastorName: string
   address: string
-  family: Family
+  location: LocationCode
   zone: string
   area: string
+  category: ChurchCategory
   ordinationStatus: string
   /** null when the directory says "UNKNOWN". */
   yearOfOrdination: number | null
@@ -35,14 +63,15 @@ export interface ParishContact {
 }
 
 export interface AttendanceRecord {
-  /** `${parishId}_${date}` — one return per parish per Sunday. */
+  /** `${parishId}_${date}` — one return per church per Sunday. */
   id: string
   parishId: string
   /** Denormalised so the admin tables and CSV export need no join. */
   parishName: string
-  family: Family
+  location: LocationCode
   zone: string
   area: string
+  category: ChurchCategory
   /** YYYY-MM-DD, always a Sunday inside the tracking window. */
   date: string
   attendance: number

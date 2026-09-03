@@ -30,11 +30,11 @@ export function useParishes() {
 
   const active = useMemo(() => parishes.filter((p) => p.status === 'active'), [parishes])
 
-  const zonesByFamily = useMemo(() => {
+  const zonesByLocation = useMemo(() => {
     const map: Record<string, string[]> = {}
     for (const p of parishes) {
       if (!p.zone) continue
-      const list = (map[p.family] ??= [])
+      const list = (map[p.location] ??= [])
       if (!list.includes(p.zone)) list.push(p.zone)
     }
     Object.values(map).forEach((l) => l.sort())
@@ -52,5 +52,5 @@ export function useParishes() {
     return map
   }, [parishes])
 
-  return { parishes, active, zonesByFamily, areasByZone, loading, error }
+  return { parishes, active, zonesByLocation, areasByZone, loading, error }
 }

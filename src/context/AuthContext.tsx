@@ -8,9 +8,12 @@ import {
 } from 'react'
 import {
   createUserWithEmailAndPassword,
+  isSignInWithEmailLink,
   onAuthStateChanged,
   sendPasswordResetEmail,
+  sendSignInLinkToEmail,
   signInWithEmailAndPassword,
+  signInWithEmailLink,
   signOut,
   type User,
 } from 'firebase/auth'
@@ -30,8 +33,22 @@ interface AuthState {
   signIn: (email: string, password: string) => Promise<void>
   signUp: (email: string, password: string) => Promise<void>
   resetPassword: (email: string) => Promise<void>
+  /** Sends a real sign-in link to the invitee, straight from Firebase. */
+  sendInviteEmail: (email: string) => Promise<void>
+  /** True when the current URL is a sign-in link Firebase issued. */
+  isEmailLink: () => boolean
+  /** Completes sign-in from that link. Returns the address signed in. */
+  completeEmailLinkSignIn: (fallbackEmail?: string) => Promise<string>
   logout: () => Promise<void>
 }
+
+/**
+ * Where the invitee's address is stashed between requesting the link and
+ * clicking it. Firebase requires the email to complete the sign-in, and on the
+ * same device this saves asking for it twice. On a different device the address
+ * comes from the `invite` parameter carried in the link instead.
+ */
+const EMAIL_LINK_KEY = 'yp23:emailForSignIn'
 
 const AuthContext = createContext<AuthState | null>(null)
 
@@ -133,6 +150,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       resetPassword: async (email) => {
         if (!auth) throw new Error('Firebase is not configured in this build.')
         await sendPasswordResetEmail(auth, email.trim())
+      },
+
+      sendInviteEmail: async (email) => {
+        if (!auth) throw new Error('Firebase is not configured in this build.')
+        const clean = email.trim().toLowerCase()
+        // The address rides along in the link so it still works when the
+        // invitee opens it on a different device from the one it was requested
+        // on — localStorage would be empty there, and Firebase cannot complete
+        // the sign-in without knowing the email.
+        await sendSignInLinkToEmail(auth, clean, {
+          url: `${window.location.origin}/admin?invite=${encodeURIComponent(clean)}`,
+          handleCodeInApp: true,
+        })
+        try {
+          window.localStorage.setItem(EMAIL_LINK_KEY, clean)
+        } catch {
+          // Private browsing can refuse storage; the link carries the address.
+        }
+      },
+
+      isEmailLink: () => Boolean(auth) && isSignInWithEmailLink(auth!, window.location.href),
+
+      completeEmailLinkSignIn: async (fallbackEmail) => {
+        if (!auth) throw new Error('Firebase is not configured in this build.')
+        let stored: string | null = null
+        try {
+          stored = window.localStorage.getItem(EMAIL_LINK_KEY)
+        } catch {
+          stored = null
+        }
+        const target = (fallbackEmail ?? stored ?? '').trim().toLowerCase()
+        if (!target) throw new Error('missing-email')
+
+        const result = await signInWithEmailLink(auth, target, window.location.href)
+        try {
+          window.localStorage.removeItem(EMAIL_LINK_KEY)
+        } catch {
+          /* nothing to clean up */
+        }
+        return result.user.email ?? target
       },
       logout: async () => {
         if (!auth) return

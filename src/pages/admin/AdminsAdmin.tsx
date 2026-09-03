@@ -227,9 +227,10 @@ export default function AdminsAdmin() {
             An <strong>admin</strong> sees the dashboard, parishes and returns. A{' '}
             <strong>super admin</strong> can also invite and remove admins.
           </p>
-          <Alert tone="info" title="No email is sent">
-            This records that the address is allowed in. You still send them the link yourself —
-            copy it or share it on WhatsApp once the invite is created.
+          <Alert tone="info" title="Creating an invite does not email anybody">
+            It records that the address is allowed in. Once created, use{' '}
+            <strong>Email the invite</strong> to have Firebase send them a sign-in link — or send
+            the link yourself by copy or WhatsApp.
           </Alert>
         </form>
       )}
@@ -387,7 +388,34 @@ function inviteMessage(email: string): string {
  * how the province actually reaches its pastors.
  */
 function ShareInvite({ email }: { email: string }) {
+  const { sendInviteEmail } = useAuth()
   const [copied, setCopied] = useState(false)
+  const [sending, setSending] = useState(false)
+  const [sent, setSent] = useState(false)
+  const [sendError, setSendError] = useState<string | null>(null)
+
+  async function emailIt() {
+    setSending(true)
+    setSendError(null)
+    try {
+      await sendInviteEmail(email)
+      setSent(true)
+    } catch (err) {
+      const code =
+        typeof err === 'object' && err && 'code' in err ? String((err as { code: string }).code) : ''
+      setSendError(
+        code === 'auth/operation-not-allowed'
+          ? 'Enable Firebase Console → Authentication → Sign-in method → Email/Password → "Email link (passwordless sign-in)", then try again.'
+          : code === 'auth/unauthorized-continue-uri'
+            ? 'Add this site to Firebase Console → Authentication → Settings → Authorized domains, then try again.'
+            : err instanceof Error
+              ? err.message
+              : String(err),
+      )
+    } finally {
+      setSending(false)
+    }
+  }
 
   async function copy() {
     const text = inviteMessage(email)
@@ -403,18 +431,34 @@ function ShareInvite({ email }: { email: string }) {
   }
 
   return (
-    <div className="flex flex-wrap gap-2">
-      <button type="button" className="btn-ghost btn-sm" onClick={() => void copy()}>
-        {copied ? 'Copied' : 'Copy invite message'}
-      </button>
-      <a
-        className="btn-ghost btn-sm"
-        href={`https://wa.me/?text=${encodeURIComponent(inviteMessage(email))}`}
-        target="_blank"
-        rel="noreferrer"
-      >
-        Send on WhatsApp
-      </a>
+    <div className="space-y-2">
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          className="btn-gold btn-sm"
+          onClick={() => void emailIt()}
+          disabled={sending}
+        >
+          {sending ? 'Sending…' : sent ? 'Email sent ✓' : 'Email the invite'}
+        </button>
+        <button type="button" className="btn-ghost btn-sm" onClick={() => void copy()}>
+          {copied ? 'Copied' : 'Copy message'}
+        </button>
+        <a
+          className="btn-ghost btn-sm"
+          href={`https://wa.me/?text=${encodeURIComponent(inviteMessage(email))}`}
+          target="_blank"
+          rel="noreferrer"
+        >
+          WhatsApp
+        </a>
+      </div>
+      {sent && (
+        <p className="text-xs text-emerald-700">
+          Sent to {email}. Tell them to check spam — it arrives from Firebase, not from you.
+        </p>
+      )}
+      {sendError && <p className="text-xs font-medium text-red-600">{sendError}</p>}
     </div>
   )
 }

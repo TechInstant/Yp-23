@@ -24,14 +24,27 @@ function describe(code: string): string {
     case 'auth/weak-password':
       return 'Choose a password of at least 6 characters.'
     case 'auth/unauthorized-domain':
+    case 'auth/unauthorized-continue-uri':
       return 'This web address is not authorised in Firebase. Add it under Authentication → Settings → Authorized domains.'
+    case 'auth/invalid-action-code':
+    case 'auth/expired-action-code':
+      return 'That invitation link has already been used or has expired. Ask for a fresh one.'
     default:
       return 'Could not sign in. Please try again.'
   }
 }
 
 export default function Login() {
-  const { user, isAdmin, loading, signIn, signUp, resetPassword } = useAuth()
+  const {
+    user,
+    isAdmin,
+    loading,
+    signIn,
+    signUp,
+    resetPassword,
+    isEmailLink,
+    completeEmailLinkSignIn,
+  } = useAuth()
   const navigate = useNavigate()
   // An invite link carries the address it was issued for: ?invite=someone@x.com
   // Signing up with a different address silently grants nothing, since the
@@ -44,11 +57,39 @@ export default function Login() {
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const [completing, setCompleting] = useState(false)
 
   useEffect(() => {
     if (!loading && user && isAdmin) navigate('/admin/dashboard', { replace: true })
   }, [loading, user, isAdmin, navigate])
 
+  // Arriving from the emailed sign-in link: complete it, then strip the
+  // one-time code out of the address bar so a refresh or a shared URL cannot
+  // replay it.
+  useEffect(() => {
+    if (!isEmailLink() || completing) return
+    setCompleting(true)
+    completeEmailLinkSignIn(invited)
+      .then(() => {
+        window.history.replaceState({}, '', '/admin')
+      })
+      .catch((err) => {
+        const code =
+          typeof err === 'object' && err && 'code' in err
+            ? String((err as { code: string }).code)
+            : String(err instanceof Error ? err.message : err)
+        setError(
+          code === 'missing-email'
+            ? 'Open the link from the email on the device that requested it, or ask for a fresh invite.'
+            : describe(code),
+        )
+      })
+      .finally(() => setCompleting(false))
+    // Runs once, on the URL the page was opened with.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  if (completing) return <Spinner label="Signing you in from your invitation…" />
   if (loading) return <Spinner label="Checking your session…" />
   if (user && isAdmin) return <Navigate to="/admin/dashboard" replace />
 

@@ -140,6 +140,49 @@ export function totalsByRemittance(
   return rows
 }
 
+export interface ParishPoint {
+  date: string
+  attendance: number
+  note: string
+  /** Difference from this parish's previous return, in people. */
+  change: number | null
+  /** The same difference as a percentage. */
+  changePct: number | null
+  /** Trailing mean over `window` returns — the line to read for direction. */
+  rollingAverage: number
+}
+
+/**
+ * One parish's returns, each carrying what it did against the Sunday before.
+ *
+ * Comparison is against the parish's **previous return**, not the previous
+ * Sunday on the calendar. When a parish misses a week, comparing against a
+ * blank would read as a total collapse and then a doubling — inventing a crisis
+ * out of a missing form.
+ */
+export function parishSeries(records: AttendanceRecord[], window = 4): ParishPoint[] {
+  const ordered = [...records].sort((a, b) => a.date.localeCompare(b.date))
+  const trailing: number[] = []
+
+  return ordered.map((r, i) => {
+    const previous = i > 0 ? ordered[i - 1].attendance : null
+    trailing.push(r.attendance)
+    if (trailing.length > window) trailing.shift()
+
+    return {
+      date: r.date,
+      attendance: r.attendance,
+      note: r.note ?? '',
+      change: previous === null ? null : r.attendance - previous,
+      changePct:
+        previous === null || previous === 0
+          ? null
+          : ((r.attendance - previous) / previous) * 100,
+      rollingAverage: Math.round(trailing.reduce((s, v) => s + v, 0) / trailing.length),
+    }
+  })
+}
+
 export interface ParishGrowth {
   parishId: string
   parishName: string

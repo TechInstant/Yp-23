@@ -32,6 +32,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    // This provider sits ABOVE <App /> in main.tsx, so it mounts before App can
+    // render the "Firebase is not configured" screen. When the build has no
+    // config baked in, `auth` is null — calling onAuthStateChanged on it throws
+    // and takes the whole page down with a blank screen, hiding the very
+    // diagnosis the user needs. Bail out quietly and let App do the explaining.
+    if (!auth) {
+      setLoading(false)
+      return
+    }
     return onAuthStateChanged(auth, async (next) => {
       setUser(next)
       if (!next) {
@@ -58,9 +67,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isAdmin,
       loading,
       signIn: async (email, password) => {
+        if (!auth) throw new Error('Firebase is not configured in this build.')
         await signInWithEmailAndPassword(auth, email.trim(), password)
       },
       logout: async () => {
+        if (!auth) return
         await signOut(auth)
       },
     }),

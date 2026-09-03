@@ -65,13 +65,17 @@ if (missingFirebaseConfig.length === 0) {
 export const firebaseInitError = initError
 
 /**
- * App.tsx refuses to render any screen when `missingFirebaseConfig` is
- * non-empty or `firebaseInitError` is set, so by the time a component reads
- * these they are always live instances. The casts keep that guarantee out of
- * every call site.
+ * `app` and `db` are cast to non-null because every component that touches them
+ * renders inside App.tsx, which refuses to render any screen while
+ * `missingFirebaseConfig` is non-empty or `firebaseInitError` is set.
+ *
+ * `auth` is deliberately NOT cast. AuthProvider wraps <App /> in main.tsx, so it
+ * mounts *outside* that guard and would happily call onAuthStateChanged(null)
+ * on a build with no config — which throws and blanks the page instead of
+ * showing the diagnosis. Honest typing forces that one call site to check.
  */
 export const app = appInstance as FirebaseApp
-export const auth = authInstance as Auth
+export const auth: Auth | null = authInstance
 export const db = dbInstance as Firestore
 
 export const COLLECTIONS = {

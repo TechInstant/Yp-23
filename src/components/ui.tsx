@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { useEffect, type ReactNode } from 'react'
 
 export function Spinner({ label = 'Loading…' }: { label?: string }) {
   return (
@@ -135,16 +135,52 @@ export function Modal({
   children: ReactNode
   footer?: ReactNode
 }) {
+  // Close on Escape, and stop the page behind from scrolling while the sheet is
+  // open — on a phone, background scroll under a modal feels broken.
+  useEffect(() => {
+    if (!open) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    document.addEventListener('keydown', onKey)
+    const previous = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.removeEventListener('keydown', onKey)
+      document.body.style.overflow = previous
+    }
+  }, [open, onClose])
+
   if (!open) return null
+
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-navy-950/50 p-4 sm:p-8">
-      <div className="card w-full max-w-2xl">
-        <div className="flex items-center justify-between border-b border-navy-100 px-5 py-4">
-          <h2 className="text-lg font-semibold text-navy-900">{title}</h2>
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-navy-950/50 p-0 sm:items-center sm:p-6"
+      role="dialog"
+      aria-modal="true"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) onClose()
+      }}
+    >
+      {/*
+        The card owns the scrolling, not the backdrop. Letting the backdrop
+        scroll pushes the header and the Save button off-screen on a long form,
+        which on a phone reads as a modal you cannot submit. Here the header and
+        footer stay pinned and only the body moves.
+
+        `dvh` rather than `vh` because it tracks the visible viewport as mobile
+        browser chrome hides and shows — with `vh` the footer ends up parked
+        underneath the address bar.
+      */}
+      <div className="card flex max-h-[100dvh] w-full max-w-2xl flex-col rounded-b-none sm:max-h-[calc(100dvh-3rem)] sm:rounded-xl">
+        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-navy-100 px-4 py-3.5 sm:px-5 sm:py-4">
+          <h2 className="min-w-0 flex-1 truncate text-base font-semibold text-navy-900 sm:text-lg">
+            {title}
+          </h2>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg p-1.5 text-navy-400 hover:bg-navy-50 hover:text-navy-700"
+            className="-mr-1 shrink-0 rounded-lg p-2 text-navy-400 hover:bg-navy-50 hover:text-navy-700"
             aria-label="Close"
           >
             <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden>
@@ -157,9 +193,13 @@ export function Modal({
             </svg>
           </button>
         </div>
-        <div className="px-5 py-5">{children}</div>
+
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-5 sm:px-5">{children}</div>
+
         {footer && (
-          <div className="flex justify-end gap-2 border-t border-navy-100 px-5 py-4">{footer}</div>
+          <div className="flex shrink-0 flex-col-reverse gap-2 border-t border-navy-100 px-4 py-3.5 sm:flex-row sm:justify-end sm:px-5 sm:py-4 [&>button]:w-full sm:[&>button]:w-auto">
+            {footer}
+          </div>
         )}
       </div>
     </div>

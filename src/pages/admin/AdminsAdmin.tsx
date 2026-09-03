@@ -49,6 +49,7 @@ export default function AdminsAdmin() {
   const [role, setRole] = useState<AdminRole>('admin')
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState<{ tone: 'success' | 'error'; text: string } | null>(null)
+  const [justInvited, setJustInvited] = useState<string | null>(null)
 
   useEffect(() => {
     const stopAdmins = onSnapshot(
@@ -116,10 +117,8 @@ export default function AdminsAdmin() {
         invitedBy: user?.email ?? '',
         createdAt: serverTimestamp(),
       })
-      setMessage({
-        tone: 'success',
-        text: `${clean} invited. Tell them to open /admin, choose "Create an account", and sign up with that exact address — access is granted the moment they do.`,
-      })
+      setMessage(null)
+      setJustInvited(clean)
       setEmail('')
     } catch (err) {
       setMessage({ tone: 'error', text: err instanceof Error ? err.message : String(err) })
@@ -221,14 +220,33 @@ export default function AdminsAdmin() {
               </select>
             </Field>
             <button type="submit" className="btn-primary sm:mb-0" disabled={busy}>
-              {busy ? 'Inviting…' : 'Send invite'}
+              {busy ? 'Creating…' : 'Create invite'}
             </button>
           </div>
           <p className="text-xs text-navy-500">
             An <strong>admin</strong> sees the dashboard, parishes and returns. A{' '}
             <strong>super admin</strong> can also invite and remove admins.
           </p>
+          <Alert tone="info" title="No email is sent">
+            This records that the address is allowed in. You still send them the link yourself —
+            copy it or share it on WhatsApp once the invite is created.
+          </Alert>
         </form>
+      )}
+
+      {justInvited && (
+        <Alert tone="success" title={`${justInvited} can now be given access`}>
+          <p>
+            Send them this link. They must create their account with{' '}
+            <strong>that exact email address</strong> — access is granted the moment they do.
+          </p>
+          <p className="mt-2 break-all rounded-lg bg-white/70 px-3 py-2 font-mono text-xs">
+            {inviteLink(justInvited)}
+          </p>
+          <div className="mt-3">
+            <ShareInvite email={justInvited} />
+          </div>
+        </Alert>
       )}
 
       <section className="card overflow-hidden">
@@ -310,8 +328,14 @@ export default function AdminsAdmin() {
                     <span className="badge bg-navy-100 text-navy-700">{LABEL[row.role]}</span>
                   </p>
                   <p className="mt-0.5 text-xs text-navy-500">
-                    Access begins when they create an account with this address.
+                    Access begins when they create an account with this address. Nothing has been
+                    emailed — send them the link.
                   </p>
+                  {isSuperAdmin && (
+                    <div className="mt-2">
+                      <ShareInvite email={row.email} />
+                    </div>
+                  )}
                 </div>
                 {isSuperAdmin && (
                   <button
@@ -341,4 +365,56 @@ export default function AdminsAdmin() {
 const LABEL: Record<AdminRole, string> = {
   super: 'Super admin',
   admin: 'Admin',
+}
+
+function inviteLink(email: string): string {
+  return `${window.location.origin}/admin?invite=${encodeURIComponent(email)}`
+}
+
+function inviteMessage(email: string): string {
+  return (
+    `You have been given admin access to the RCCG Youth Province 23 attendance portal.\n\n` +
+    `Open this link and create your account using this exact email address (${email}):\n` +
+    `${inviteLink(email)}`
+  )
+}
+
+/**
+ * Nothing here sends email. The province has no mail service and no
+ * service-account key, so an invitation is a record saying "this address is
+ * allowed in" — it still has to be delivered by hand. These buttons make that
+ * one tap: copy the message, or open WhatsApp with it already written, which is
+ * how the province actually reaches its pastors.
+ */
+function ShareInvite({ email }: { email: string }) {
+  const [copied, setCopied] = useState(false)
+
+  async function copy() {
+    const text = inviteMessage(email)
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2500)
+    } catch {
+      // Clipboard access is refused on insecure origins and in some in-app
+      // browsers; falling back to a prompt still lets them copy it by hand.
+      window.prompt('Copy this message and send it to them:', text)
+    }
+  }
+
+  return (
+    <div className="flex flex-wrap gap-2">
+      <button type="button" className="btn-ghost btn-sm" onClick={() => void copy()}>
+        {copied ? 'Copied' : 'Copy invite message'}
+      </button>
+      <a
+        className="btn-ghost btn-sm"
+        href={`https://wa.me/?text=${encodeURIComponent(inviteMessage(email))}`}
+        target="_blank"
+        rel="noreferrer"
+      >
+        Send on WhatsApp
+      </a>
+    </div>
+  )
 }

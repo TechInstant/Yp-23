@@ -33,8 +33,13 @@ function describe(code: string): string {
 export default function Login() {
   const { user, isAdmin, loading, signIn, signUp, resetPassword } = useAuth()
   const navigate = useNavigate()
-  const [mode, setMode] = useState<'signin' | 'signup'>('signin')
-  const [email, setEmail] = useState('')
+  // An invite link carries the address it was issued for: ?invite=someone@x.com
+  // Signing up with a different address silently grants nothing, since the
+  // invitation is filed under the email — so prefill it and open on sign-up.
+  const invited = new URLSearchParams(window.location.search).get('invite')?.trim().toLowerCase()
+
+  const [mode, setMode] = useState<'signin' | 'signup'>(invited ? 'signup' : 'signin')
+  const [email, setEmail] = useState(invited ?? '')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
@@ -106,6 +111,15 @@ export default function Login() {
                 ? 'Use the exact email address your invitation was sent to. Access is granted automatically once you sign up.'
                 : 'For province executives only. Parishes submit attendance without an account.'}
             </p>
+
+            {invited && !user && (
+              <div className="mt-5">
+                <Alert tone="info" title="You have been invited">
+                  Create your account with <strong>{invited}</strong>. Using any other address
+                  will not grant access.
+                </Alert>
+              </div>
+            )}
 
             {user && !isAdmin && (
               <div className="mt-5">

@@ -455,6 +455,14 @@ export default function Dashboard() {
             )}
           </section>
 
+          <section className="card p-5 sm:p-6">
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <h2 className="text-lg font-semibold text-navy-900">Church standings</h2>
+              <p className="text-sm text-navy-500">Who is filling the most seats</p>
+            </div>
+            <Standings rows={growth} />
+          </section>
+
           {stats.latestSunday && (
             <section className="card p-5 sm:p-6">
               <h2 className="text-lg font-semibold text-navy-900">
@@ -700,5 +708,133 @@ function GrowthTable({ rows }: { rows: ParishGrowth[] }) {
         </tbody>
       </table>
     </div>
+  )
+}
+
+type RankKey = 'average' | 'latest' | 'best' | 'total'
+
+const RANK_OPTIONS: { key: RankKey; label: string; hint: string }[] = [
+  { key: 'average', label: 'Average', hint: 'mean attendance across the range' },
+  { key: 'latest', label: 'Latest Sunday', hint: 'most recent figure filed' },
+  { key: 'best', label: 'Best Sunday', hint: 'highest single Sunday' },
+  { key: 'total', label: 'Total counted', hint: 'everyone counted across the range' },
+]
+
+/**
+ * The league table: churches ordered by how many people they are actually
+ * seating.
+ *
+ * Average leads rather than latest Sunday, because a single week is too easily
+ * won by a harvest or a convention — a church should top this table for filling
+ * seats week after week, not for one good Sunday. Total is offered as well, but
+ * it quietly rewards whoever filed the most returns, so it is not the default.
+ */
+function Standings({ rows }: { rows: ParishGrowth[] }) {
+  const [rankBy, setRankBy] = useState<RankKey>('average')
+
+  const ordered = useMemo(() => {
+    const value = (g: ParishGrowth) =>
+      rankBy === 'average'
+        ? g.average
+        : rankBy === 'latest'
+          ? g.latest
+          : rankBy === 'best'
+            ? g.best
+            : g.average * g.returns
+    return [...rows].sort((a, b) => value(b) - value(a))
+  }, [rows, rankBy])
+
+  if (ordered.length === 0) {
+    return <p className="py-10 text-center text-sm text-navy-500">No returns to rank yet.</p>
+  }
+
+  const leader = ordered[0]
+
+  return (
+    <>
+      <div className="mt-4 flex max-w-full overflow-x-auto rounded-lg border border-navy-200 bg-white p-1">
+        {RANK_OPTIONS.map((o) => (
+          <button
+            key={o.key}
+            type="button"
+            onClick={() => setRankBy(o.key)}
+            title={o.hint}
+            className={`shrink-0 whitespace-nowrap rounded-md px-3 py-1.5 text-xs font-semibold transition ${
+              rankBy === o.key ? 'bg-navy-900 text-white' : 'text-navy-600 hover:bg-navy-50'
+            }`}
+          >
+            {o.label}
+          </button>
+        ))}
+      </div>
+
+      <p className="mt-3 text-sm text-navy-600">
+        Leading on {RANK_OPTIONS.find((o) => o.key === rankBy)?.label.toLowerCase()}:{' '}
+        <Link
+          to={`/admin/parishes/${leader.parishId}`}
+          className="font-semibold text-navy-900 hover:underline"
+        >
+          {leader.parishName}
+        </Link>
+      </p>
+
+      <div className="mt-4 overflow-x-auto">
+        <table className="w-full min-w-[680px]">
+          <thead className="border-b border-navy-100">
+            <tr>
+              <th className="th w-12 text-right">#</th>
+              <th className="th">Church</th>
+              <th className="th text-right">Average</th>
+              <th className="th text-right">Latest</th>
+              <th className="th text-right">Best</th>
+              <th className="th text-right">Returns</th>
+              <th className="th text-right">Trend</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-navy-50">
+            {ordered.map((g, i) => (
+              <tr key={g.parishId} className="hover:bg-navy-50/60">
+                <td
+                  className={`td text-right font-semibold tabular-nums ${
+                    i < 3 ? 'text-gold-600' : 'text-navy-400'
+                  }`}
+                >
+                  {i + 1}
+                </td>
+                <td className="td font-medium">
+                  <Link to={`/admin/parishes/${g.parishId}`} className="hover:underline">
+                    {g.parishName}
+                  </Link>
+                </td>
+                <td className="td text-right font-semibold tabular-nums">
+                  {Math.round(g.average).toLocaleString()}
+                </td>
+                <td className="td text-right tabular-nums">{g.latest.toLocaleString()}</td>
+                <td className="td text-right tabular-nums">{g.best.toLocaleString()}</td>
+                <td className="td text-right tabular-nums text-navy-500">{g.returns}</td>
+                <td
+                  className={`td text-right font-semibold tabular-nums ${
+                    g.changePct === null
+                      ? 'text-navy-400'
+                      : g.changePct >= 0
+                        ? 'text-[#1B57A5]'
+                        : 'text-[#C0392B]'
+                  }`}
+                >
+                  {g.changePct === null
+                    ? '—'
+                    : `${g.changePct > 0 ? '+' : ''}${g.changePct.toFixed(1)}%`}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <p className="mt-3 text-xs text-navy-500">
+        Size and growth are different questions: the largest church here can still be shrinking,
+        and the fastest-growing one can be small. The trend column is the one to act on.
+      </p>
+    </>
   )
 }

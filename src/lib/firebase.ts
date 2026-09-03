@@ -19,22 +19,40 @@ function clean(value: string | undefined): string {
   return value.trim().replace(/,\s*$/, '').replace(/^["']|["']$/g, '').trim()
 }
 
+/**
+ * Both spellings are accepted: the canonical `VITE_FIREBASE_API_KEY` and the
+ * shorter `VITE_API_KEY`. Firebase's own console labels these keys `apiKey`,
+ * `authDomain` and so on, so dropping the FIREBASE_ segment is the natural
+ * thing to type — and the failure it caused was miserable to diagnose, because
+ * a name mismatch makes *every* value vanish at once and looks identical to
+ * "the variables were never saved".
+ *
+ * Each pair is referenced statically. Vite substitutes `import.meta.env.VITE_X`
+ * textually at build time, so a computed lookup like `import.meta.env[name]`
+ * would silently yield undefined in the production bundle.
+ */
 const config: FirebaseOptions = {
-  apiKey: clean(import.meta.env.VITE_FIREBASE_API_KEY),
-  authDomain: clean(import.meta.env.VITE_FIREBASE_AUTH_DOMAIN),
-  projectId: clean(import.meta.env.VITE_FIREBASE_PROJECT_ID),
-  storageBucket: clean(import.meta.env.VITE_FIREBASE_STORAGE_BUCKET),
-  messagingSenderId: clean(import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID),
-  appId: clean(import.meta.env.VITE_FIREBASE_APP_ID),
+  apiKey: clean(import.meta.env.VITE_FIREBASE_API_KEY) || clean(import.meta.env.VITE_API_KEY),
+  authDomain:
+    clean(import.meta.env.VITE_FIREBASE_AUTH_DOMAIN) || clean(import.meta.env.VITE_AUTH_DOMAIN),
+  projectId:
+    clean(import.meta.env.VITE_FIREBASE_PROJECT_ID) || clean(import.meta.env.VITE_PROJECT_ID),
+  storageBucket:
+    clean(import.meta.env.VITE_FIREBASE_STORAGE_BUCKET) ||
+    clean(import.meta.env.VITE_STORAGE_BUCKET),
+  messagingSenderId:
+    clean(import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID) ||
+    clean(import.meta.env.VITE_MESSAGING_SENDER_ID),
+  appId: clean(import.meta.env.VITE_FIREBASE_APP_ID) || clean(import.meta.env.VITE_APP_ID),
 }
 
 const ENV_NAMES: Record<string, string> = {
-  apiKey: 'VITE_FIREBASE_API_KEY',
-  authDomain: 'VITE_FIREBASE_AUTH_DOMAIN',
-  projectId: 'VITE_FIREBASE_PROJECT_ID',
-  storageBucket: 'VITE_FIREBASE_STORAGE_BUCKET',
-  messagingSenderId: 'VITE_FIREBASE_MESSAGING_SENDER_ID',
-  appId: 'VITE_FIREBASE_APP_ID',
+  apiKey: 'VITE_FIREBASE_API_KEY (or VITE_API_KEY)',
+  authDomain: 'VITE_FIREBASE_AUTH_DOMAIN (or VITE_AUTH_DOMAIN)',
+  projectId: 'VITE_FIREBASE_PROJECT_ID (or VITE_PROJECT_ID)',
+  storageBucket: 'VITE_FIREBASE_STORAGE_BUCKET (or VITE_STORAGE_BUCKET)',
+  messagingSenderId: 'VITE_FIREBASE_MESSAGING_SENDER_ID (or VITE_MESSAGING_SENDER_ID)',
+  appId: 'VITE_FIREBASE_APP_ID (or VITE_APP_ID)',
 }
 
 export const missingFirebaseConfig = Object.entries(config)

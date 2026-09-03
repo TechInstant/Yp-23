@@ -10,6 +10,7 @@ import RegisterParish from './pages/RegisterParish'
 import SubmitAttendance from './pages/SubmitAttendance'
 import AdminsAdmin from './pages/admin/AdminsAdmin'
 import AttendanceAdmin from './pages/admin/AttendanceAdmin'
+import CompareSundays from './pages/admin/CompareSundays'
 import Dashboard from './pages/admin/Dashboard'
 import Login from './pages/admin/Login'
 import ParishDetail from './pages/admin/ParishDetail'
@@ -93,6 +94,7 @@ export default function App() {
           <Route path="parishes" element={<ParishesAdmin />} />
           <Route path="parishes/:parishId" element={<ParishDetail />} />
           <Route path="attendance" element={<AttendanceAdmin />} />
+          <Route path="compare" element={<CompareSundays />} />
           <Route path="admins" element={<AdminsAdmin />} />
         </Route>
       </Route>

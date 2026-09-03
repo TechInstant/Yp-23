@@ -56,22 +56,28 @@ export default function Dashboard() {
   const growth = useMemo(() => parishGrowth(records, active), [records, active])
   const stats = useMemo(() => headline(records, parishes, growth), [records, parishes, growth])
 
-  // Remittance is collated across whole periods, so it is scoped to the
-  // periods that have closed rather than the Sunday range picker.
-  const { records: allRecords } = useAttendance(
-    useMemo(() => {
-      const periods = remittancePeriods()
-      return periods.length
-        ? { from: periods[0].opensOn, to: periods[periods.length - 1].closesOn }
-        : null
-    }, []),
-  )
+  // Remittance is collated across whole periods, so it is scoped to periods
+  // rather than to the Sunday range picker.
+  //
+  // Bounded to the last 18 closed periods on purpose. Spanning the whole
+  // exercise would mean a live subscription to every return ever filed — by
+  // 2029 that is thousands of documents read on every visit to this page, and
+  // Firestore bills per document. Eighteen months is more history than anyone
+  // reads off a bar chart.
+  const remittanceRange = useMemo(() => {
+    const closed = closedPeriods()
+    if (closed.length === 0) return null
+    const window = closed.slice(-18)
+    return { from: window[0].opensOn, to: window[window.length - 1].closesOn }
+  }, [])
+
+  const { records: remittanceRecords } = useAttendance(remittanceRange)
 
   const remittance = useMemo(() => {
-    const closed = closedPeriods()
+    const closed = closedPeriods().slice(-18)
     if (closed.length === 0) return []
-    return totalsByRemittance(allRecords, closed)
-  }, [allRecords])
+    return totalsByRemittance(remittanceRecords, closed)
+  }, [remittanceRecords])
 
   const ranked = useMemo(
     () =>
@@ -201,9 +207,11 @@ export default function Dashboard() {
               value={stats.latestTotal.toLocaleString()}
               trend={stats.weekOnWeekPct}
               hint={
-                stats.latestSunday
-                  ? `vs ${formatSunday(stats.latestSunday)} week before`
-                  : undefined
+                stats.previousSunday
+                  ? `vs ${formatSunday(stats.previousSunday)}`
+                  : stats.latestSunday
+                    ? formatSunday(stats.latestSunday)
+                    : undefined
               }
             />
             <StatTile

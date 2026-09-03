@@ -132,7 +132,11 @@ export function totalsByRemittance(
   // reported so a gap in the data does not read as a 100% collapse.
   let previous: RemittanceTotals | null = null
   for (const row of rows) {
-    if (previous && previous.total > 0) {
+    // A period nobody reported gets no percentage at all. Without the
+    // `row.returns > 0` guard it compares 0 against the last real total and
+    // renders as a red -100%, which reads as the whole province collapsing when
+    // in fact the forms simply were not filed.
+    if (row.returns > 0 && previous && previous.total > 0) {
       row.changePct = ((row.total - previous.total) / previous.total) * 100
     }
     if (row.returns > 0) previous = row
@@ -249,6 +253,8 @@ export function parishGrowth(
 
 export interface Headline {
   latestSunday: string | null
+  /** The Sunday `weekOnWeekPct` is measured against. */
+  previousSunday: string | null
   latestTotal: number
   previousTotal: number
   weekOnWeekPct: number | null
@@ -266,6 +272,7 @@ export function headline(
   growth: ParishGrowth[],
 ): Headline {
   const active = parishes.filter((p) => p.status === 'active')
+  const activeIds = new Set(active.map((p) => p.id))
   const dates = [...new Set(records.map((r) => r.date))].sort()
   const latestSunday = dates.length ? dates[dates.length - 1] : null
   const previousSunday = dates.length > 1 ? dates[dates.length - 2] : null
@@ -279,14 +286,22 @@ export function headline(
 
   return {
     latestSunday,
+    previousSunday,
     latestTotal,
     previousTotal,
     weekOnWeekPct:
       previousSunday && previousTotal > 0
         ? ((latestTotal - previousTotal) / previousTotal) * 100
         : null,
+    // Counted against the same population as activeParishes below. Without the
+    // status filter an archived parish that reported earlier in the season
+    // still counts, and the tile reads "42/41".
     reportingParishes: latestSunday
-      ? new Set(records.filter((r) => r.date === latestSunday).map((r) => r.parishId)).size
+      ? new Set(
+          records
+            .filter((r) => r.date === latestSunday && activeIds.has(r.parishId))
+            .map((r) => r.parishId),
+        ).size
       : 0,
     activeParishes: active.length,
     averageAttendance: records.length ? Math.round(totalAttendance / records.length) : 0,

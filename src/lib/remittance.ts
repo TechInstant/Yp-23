@@ -114,9 +114,12 @@ export function remittancePeriods(): RemittancePeriod[] {
         partial: ordered.length < 4,
       }
     })
-    // The final carry lands in a month past the end of the window; drop it,
-    // since the exercise stops before that remittance can be completed.
-    .filter((p) => p.sundays.some((d) => d <= sundays[sundays.length - 1]))
+    // Drop the trailing carry. The last Sunday of the exercise opens a
+    // remittance for the month *after* it, which can never be completed —
+    // otherwise the dashboard sprouts a "January 2030" bar holding one Sunday.
+    // Testing whether its Sunday falls inside the window does not work: that
+    // Sunday is the final one, so it always passes.
+    .filter((p) => p.key <= monthKey(sundays[sundays.length - 1]))
     .sort((a, b) => a.key.localeCompare(b.key))
 
   return cached
@@ -130,9 +133,16 @@ export function remittanceKeyFor(date: string): string | null {
   return null
 }
 
-/** Periods whose Sundays have all been and gone — the ones worth charting. */
+/**
+ * Periods whose Sundays have all been and gone — the ones worth charting.
+ *
+ * Strictly before today, not on or before: on its closing Sunday the period is
+ * still being counted, and returns for that morning have not been filed.
+ * Including it would show every month as a sharp decline for one week, then
+ * jump when the last returns arrive.
+ */
 export function closedPeriods(today = todayISO()): RemittancePeriod[] {
-  return remittancePeriods().filter((p) => p.closesOn <= today)
+  return remittancePeriods().filter((p) => p.closesOn < today)
 }
 
 /** The period currently being collected, if the exercise has started. */

@@ -46,6 +46,13 @@ export default function AttendanceAdmin() {
 
   async function saveEdit(value: number, note: string) {
     if (!editing) return
+    // Number('') is 0, so clearing the box and pressing Save would store a
+    // real-looking zero attendance that is indistinguishable from an empty
+    // service — and drag the parish's average down for the rest of the season.
+    if (!Number.isInteger(value) || value < 0) {
+      setMessage({ tone: 'error', text: 'Enter the attendance as a whole number, 0 or more.' })
+      return
+    }
     try {
       await updateDoc(doc(db, COLLECTIONS.attendance, editing.id), {
         attendance: value,
@@ -93,11 +100,16 @@ export default function AttendanceAdmin() {
       for (const row of rows) {
         const parish = byName.get((row.parishName ?? '').trim().toUpperCase())
         const date = (row.date ?? '').trim()
-        const count = Number(row.attendance)
+        const raw = (row.attendance ?? '').trim()
+        // Number('') is 0, so a blank cell would import as a genuine zero
+        // attendance rather than being rejected. Check the text, not the number.
+        const count = raw === '' ? Number.NaN : Number(raw)
 
         if (!parish) rejected.push(`${row.parishName || '(blank)'} — no such active parish`)
         else if (!isTrackedSunday(date))
           rejected.push(`${parish.name} — "${date}" is not a Sunday in the tracking window`)
+        else if (raw === '')
+          rejected.push(`${parish.name} ${date} — attendance is blank`)
         else if (!Number.isInteger(count) || count < 0)
           rejected.push(`${parish.name} ${date} — "${row.attendance}" is not a whole number`)
         else valid.push({ parish, date, count, note: (row.note ?? '').trim() })

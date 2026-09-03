@@ -67,7 +67,13 @@ service cloud.firestore {
     // Sunday of December 2029. Kept in sync with src/lib/sundays.ts.
     function isTrackedSunday(d) {
       return d is string
-        && d.matches('^20(2[6-9])-[0-1][0-9]-[0-3][0-9]$')
+        // Rules cannot compute a weekday, so a determined writer could still
+        // post a Tuesday inside the window. The charts only bucket real tracked
+        // Sundays, so such a row would be invisible there while still counting
+        // in the totals — analytics therefore filters to tracked Sundays too,
+        // keeping the two consistent. This regex at least rejects impossible
+        // dates like 2026-19-05 and 2026-09-39.
+        && d.matches('^20(2[6-9])-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$')
         && d >= '2026-09-06'
         && d <= '2029-12-30';
     }
@@ -220,6 +226,12 @@ service cloud.firestore {
                       && incoming().pastorName is string
                       && incoming().pastorName.size() >= 2
                       && incoming().pastorName.size() <= 120
+                      // parishName is denormalised onto the row and rendered in
+                      // the admin tables and CSV exports, so it needs the same
+                      // bounds as every other public-writable string.
+                      && incoming().parishName is string
+                      && incoming().parishName.size() >= 2
+                      && incoming().parishName.size() <= 120
                       && incoming().attendance is int
                       && incoming().attendance >= 0
                       && incoming().attendance <= 100000

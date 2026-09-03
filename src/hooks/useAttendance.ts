@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { collection, onSnapshot, orderBy, query, where } from 'firebase/firestore'
 import { COLLECTIONS, db } from '../lib/firebase'
 import type { AttendanceRecord } from '../types'
-import type { DateRange } from '../lib/sundays'
+import { isTrackedSunday, type DateRange } from '../lib/sundays'
 
 /**
  * Attendance for a date range. Over the full 174-Sunday exercise this
@@ -33,7 +33,18 @@ export function useAttendance(range: DateRange | null) {
     return onSnapshot(
       q,
       (snap) => {
-        setRecords(snap.docs.map((d) => ({ id: d.id, ...d.data() }) as AttendanceRecord))
+        // Firestore rules cannot check that a date is a Sunday, so a crafted
+        // write could sit in the collection on a Tuesday. The charts only
+        // bucket real tracked Sundays; dropping the rest here keeps the totals
+        // and the charts telling the same story instead of quietly disagreeing.
+        setRecords(
+          snap.docs
+            .map((d) => ({ id: d.id, ...d.data() }) as AttendanceRecord)
+            .filter((r) => isTrackedSunday(r.date)),
+        )
+        // Clear any earlier failure, or one transient error pins a red banner
+        // to the dashboard for the rest of the session even once data loads.
+        setError(null)
         setLoading(false)
       },
       (err) => {

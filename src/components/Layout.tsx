@@ -83,8 +83,8 @@ export default function Layout() {
       <footer className="border-t border-navy-100 bg-white">
         <div className="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-6 text-sm text-navy-500 sm:flex-row sm:items-center sm:justify-between">
           <p>
-            RCCG Youth Province 23 — Ife &amp; Ede Families. Weekly Sunday service returns,
-            September 2026 – December 2029.
+            RCCG Youth Province 23. Weekly Sunday service returns, September 2026 – December
+            2029.
           </p>
           <Link to="/admin" className="font-medium text-navy-700 hover:text-navy-900">
             Provincial admin →

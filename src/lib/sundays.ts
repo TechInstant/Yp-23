@@ -166,16 +166,26 @@ export const RANGE_PRESETS = [
 export type RangePresetKey = (typeof RANGE_PRESETS)[number]['key']
 
 export function resolveRange(preset: RangePresetKey, today = todayISO()): DateRange {
-  const past = allSundays().filter((d) => d <= today)
-  // Before the first Sunday there is nothing behind us; show the window ahead
-  // instead of an empty chart.
-  const basis = past.length > 0 ? past : allSundays().slice(0, 1)
+  const all = allSundays()
+  const past = all.filter((d) => d <= today)
+
   const counts: Record<RangePresetKey, number> = {
     last8: 8,
     last26: 26,
     last52: 52,
-    all: basis.length,
+    all: all.length,
   }
-  const n = Math.min(counts[preset], basis.length)
-  return { from: basis[basis.length - n], to: basis[basis.length - 1] }
+
+  // Before the exercise begins there is nothing behind us. Look *forward* from
+  // the first Sunday instead of backward from the last: taking the tail of the
+  // whole exercise would land the window in 2029, and clamping it to a single
+  // Sunday — which is what this used to do — collapses every chart to one
+  // point, so any data loaded early looks broken for the wrong reason.
+  if (past.length === 0) {
+    const n = Math.min(counts[preset], all.length)
+    return { from: all[0], to: all[n - 1] }
+  }
+
+  const n = Math.min(counts[preset], past.length)
+  return { from: past[past.length - n], to: past[past.length - 1] }
 }

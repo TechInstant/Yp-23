@@ -52,7 +52,8 @@ export interface AttendanceRecord {
   date: string
   attendance: number
   note: string
-  source: 'parish-form' | 'admin'
+  /** 'demo' marks preview rows, so clearing them cannot touch real returns. */
+  source: 'parish-form' | 'admin' | 'demo'
   createdAt?: unknown
   updatedAt?: unknown
 }

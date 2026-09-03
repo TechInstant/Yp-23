@@ -74,9 +74,33 @@ export function currentReportingSunday(today = todayISO()): string {
   return SEASON_START
 }
 
-/** Tracked Sundays a parish is allowed to report on — never the future. */
-export function selectableSundays(today = todayISO()): string[] {
-  return allSundays().filter((d) => d <= today)
+/**
+ * Whether a date may be reported on: a Sunday, inside the tracking window, and
+ * already past. This is the single definition of "selectable" — the calendar,
+ * the default value and the submit guard all call it, so they cannot disagree.
+ */
+export function isSelectableSunday(iso: string, today = todayISO()): boolean {
+  return isTrackedSunday(iso) && iso <= today
+}
+
+/**
+ * The Sunday a form should open on: the most recent one that may actually be
+ * reported. Empty string before the exercise begins — deliberately *not*
+ * SEASON_START, because until 6 September 2026 has happened, defaulting to it
+ * would offer a future Sunday the calendar then refuses to re-select.
+ */
+export function latestSelectableSunday(today = todayISO()): string {
+  if (today < SEASON_START) return ''
+  const list = allSundays()
+  for (let i = list.length - 1; i >= 0; i--) {
+    if (list[i] <= today) return list[i]
+  }
+  return ''
+}
+
+/** True once the first Sunday of the exercise has arrived. */
+export function hasStarted(today = todayISO()): boolean {
+  return today >= SEASON_START
 }
 
 /**

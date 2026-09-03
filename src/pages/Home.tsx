@@ -1,8 +1,8 @@
 import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import {
-  Area,
-  AreaChart,
+  Bar,
+  BarChart,
   CartesianGrid,
   ResponsiveContainer,
   Tooltip,
@@ -14,30 +14,46 @@ import { Spinner } from '../components/ui'
 import { useAttendance } from '../hooks/useAttendance'
 import { useParishes } from '../hooks/useParishes'
 import { totalsBySunday } from '../lib/analytics'
+import { AXIS_TICK, CHART, TOOLTIP_STYLE } from '../lib/chartTheme'
 import {
   currentReportingSunday,
   formatAxis,
   formatSundayLong,
+  hasStarted,
   resolveRange,
-  SEASON_END,
   SEASON_START,
-  allSundays,
 } from '../lib/sundays'
 
+/**
+ * The public page. It reports the Sunday facts and nothing else: how many came,
+ * and which parishes have uploaded. No location or zone breakdown, and no
+ * growth analysis — growth is read on the admin dashboard, where the people who
+ * act on it can see it in context.
+ */
 export default function Home() {
-  const { parishes, active, loading } = useParishes()
+  const { active, loading } = useParishes()
   const range = useMemo(() => resolveRange('last8'), [])
   const { records } = useAttendance(range)
 
   const series = useMemo(() => totalsBySunday(records, range), [records, range])
   const thisSunday = currentReportingSunday()
-  const totalSundays = allSundays().length
+  const started = hasStarted()
 
-  const families = useMemo(() => {
-    const counts = { IFE: 0, EDE: 0 }
-    for (const p of active) counts[p.family] += 1
-    return counts
-  }, [active])
+  const uploaded = useMemo(
+    () =>
+      records
+        .filter((r) => r.date === thisSunday)
+        .sort((a, b) => a.parishName.localeCompare(b.parishName)),
+    [records, thisSunday],
+  )
+
+  const uploadedIds = useMemo(() => new Set(uploaded.map((r) => r.parishId)), [uploaded])
+  const outstanding = useMemo(
+    () => active.filter((p) => !uploadedIds.has(p.id)).sort((a, b) => a.name.localeCompare(b.name)),
+    [active, uploadedIds],
+  )
+
+  const sundayTotal = uploaded.reduce((sum, r) => sum + r.attendance, 0)
 
   return (
     <div className="space-y-10">
@@ -51,11 +67,8 @@ export default function Home() {
               Youth Province 23 weekly attendance returns
             </h1>
             <p className="mt-4 max-w-xl text-navy-600">
-              Every parish in the Ife and Ede families submits one figure each Sunday. The
-              province keeps a single running record from{' '}
-              <strong>{formatSundayLong(SEASON_START)}</strong> to{' '}
-              <strong>{formatSundayLong(SEASON_END)}</strong> — {totalSundays} Sundays — so
-              growth can be seen for what it is, parish by parish.
+              Every parish in each location must submit their Sunday attendance, starting from{' '}
+              <strong>{formatSundayLong(SEASON_START)}</strong>.
             </p>
 
             <div className="mt-7 flex flex-wrap gap-3">
@@ -68,17 +81,22 @@ export default function Home() {
             </div>
 
             <p className="mt-4 text-sm text-navy-500">
-              Current reporting Sunday:{' '}
+              {started ? 'Current reporting Sunday: ' : 'Returns open on '}
               <strong className="text-navy-800">{formatSundayLong(thisSunday)}</strong>
             </p>
           </div>
 
           <div className="flex flex-col items-center gap-6 rounded-xl bg-navy-900 p-8 text-center">
             <BrandMark height={120} onDark className="w-full max-w-[280px]" />
-            <div className="grid w-full grid-cols-3 gap-4">
-              <Figure value={loading ? '—' : String(parishes.length)} label="Parishes" />
-              <Figure value={loading ? '—' : String(families.IFE)} label="Ife family" />
-              <Figure value={loading ? '—' : String(families.EDE)} label="Ede family" />
+            <div className="grid w-full grid-cols-2 gap-4">
+              <Figure
+                value={loading ? '—' : `${uploaded.length}/${active.length}`}
+                label="Uploaded"
+              />
+              <Figure
+                value={loading ? '—' : sundayTotal.toLocaleString()}
+                label="In attendance"
+              />
             </div>
           </div>
         </div>
@@ -87,19 +105,74 @@ export default function Home() {
       <section className="grid gap-5 md:grid-cols-3">
         <StepCard
           n="1"
-          title="Claim your parish, once"
-          body="Find it by family, zone and area, then put your name and phone number on record. A parish the directory has not caught up with yet can be added from the same form."
+          title="Find your parish"
+          body="Pick your parish from the list. If it is not there yet, claim or register it once and it appears from then on."
         />
         <StepCard
           n="2"
           title="Enter one figure"
-          body="Total number in the Sunday service. One return per parish per Sunday, so a second submission cannot quietly double-count you."
+          body="Your name, your number, the Sunday, and the total present. One return per parish per Sunday, so you cannot be double-counted."
         />
         <StepCard
           n="3"
-          title="Watch the line move"
-          body="The province sees every parish's trend, which zones are growing, and who has not reported yet."
+          title="Check you are counted"
+          body="Your parish appears in the uploaded list below as soon as the return is saved."
         />
+      </section>
+
+      <section className="card p-6">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h2 className="text-lg font-semibold text-navy-900">
+            Uploaded for {formatSundayLong(thisSunday)}
+          </h2>
+          <span className="text-sm text-navy-500">
+            {uploaded.length} of {active.length} parishes
+          </span>
+        </div>
+
+        {loading ? (
+          <Spinner />
+        ) : uploaded.length === 0 ? (
+          <p className="mt-6 rounded-lg bg-navy-50 px-4 py-6 text-center text-sm text-navy-500">
+            {started
+              ? 'No parish has uploaded for this Sunday yet.'
+              : `Returns open on ${formatSundayLong(SEASON_START)}.`}
+          </p>
+        ) : (
+          <ul className="mt-5 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {uploaded.map((r) => (
+              <li
+                key={r.id}
+                className="flex items-center justify-between gap-2 rounded-lg border border-emerald-100 bg-emerald-50/60 px-3 py-2 text-sm"
+              >
+                <span className="truncate font-medium text-navy-800" title={r.parishName}>
+                  {r.parishName}
+                </span>
+                <span className="shrink-0 font-semibold tabular-nums text-emerald-700">
+                  {r.attendance.toLocaleString()}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {!loading && outstanding.length > 0 && (
+          <details className="mt-5 rounded-lg border border-navy-100 px-4 py-3">
+            <summary className="cursor-pointer text-sm font-medium text-navy-700">
+              {outstanding.length} parish{outstanding.length === 1 ? '' : 'es'} yet to upload
+            </summary>
+            <ul className="mt-3 flex flex-wrap gap-2">
+              {outstanding.map((p) => (
+                <li
+                  key={p.id}
+                  className="rounded-full bg-navy-50 px-3 py-1 text-xs font-medium text-navy-600"
+                >
+                  {p.name}
+                </li>
+              ))}
+            </ul>
+          </details>
+        )}
       </section>
 
       <section className="card p-6">
@@ -107,7 +180,7 @@ export default function Home() {
           <h2 className="text-lg font-semibold text-navy-900">
             Province-wide attendance, last 8 Sundays
           </h2>
-          <span className="text-sm text-navy-500">Ife &amp; Ede families combined</span>
+          <span className="text-sm text-navy-500">Total submitted each Sunday</span>
         </div>
 
         {loading ? (
@@ -115,51 +188,45 @@ export default function Home() {
         ) : (
           <div className="mt-6 h-64">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={series} margin={{ top: 4, right: 8, bottom: 0, left: -12 }}>
-                <defs>
-                  <linearGradient id="homeFill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#2E3F81" stopOpacity={0.35} />
-                    <stop offset="100%" stopColor="#2E3F81" stopOpacity={0.02} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid stroke="#E2E7F5" vertical={false} />
+              <BarChart data={series} margin={{ top: 4, right: 8, bottom: 0, left: -12 }}>
+                <CartesianGrid stroke={CHART.grid} vertical={false} />
                 <XAxis
                   dataKey="date"
                   tickFormatter={formatAxis}
-                  tick={{ fontSize: 12, fill: '#4055A0' }}
+                  tick={AXIS_TICK}
                   tickLine={false}
-                  axisLine={{ stroke: '#E2E7F5' }}
+                  axisLine={{ stroke: CHART.grid }}
+                  minTickGap={20}
                 />
                 <YAxis
-                  tick={{ fontSize: 12, fill: '#4055A0' }}
+                  tick={AXIS_TICK}
                   tickLine={false}
                   axisLine={false}
                   allowDecimals={false}
+                  width={52}
                 />
                 <Tooltip
+                  cursor={{ fill: 'rgba(64, 85, 160, 0.08)' }}
                   labelFormatter={(v) => formatSundayLong(String(v))}
-                  formatter={(v: number) => [v.toLocaleString(), 'In attendance']}
-                  contentStyle={{
-                    borderRadius: 10,
-                    border: '1px solid #E2E7F5',
-                    fontSize: 13,
-                  }}
+                  formatter={(value: number, _n, item) => [
+                    `${value.toLocaleString()} from ${item?.payload?.reporting ?? 0} parishes`,
+                    'In attendance',
+                  ]}
+                  contentStyle={TOOLTIP_STYLE}
                 />
-                <Area
-                  type="monotone"
+                <Bar
                   dataKey="total"
-                  stroke="#16225A"
-                  strokeWidth={2.5}
-                  fill="url(#homeFill)"
+                  fill={CHART.single}
+                  radius={[4, 4, 0, 0]}
+                  maxBarSize={44}
                 />
-              </AreaChart>
+              </BarChart>
             </ResponsiveContainer>
           </div>
         )}
 
         <p className="mt-4 text-sm text-navy-500">
-          A flat stretch usually means returns are missing, not that nobody came. Admins can see
-          exactly which parishes are outstanding on the dashboard.
+          A short bar means returns are still coming in, not that fewer people came.
         </p>
       </section>
     </div>

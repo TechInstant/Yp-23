@@ -28,15 +28,16 @@ console.log(`\nSeeding ${parishes.length} parishes into project "${projectId}" (
 if (dryRun) console.log('(dry run — nothing will be written)\n')
 
 let written = 0
-let contacts = 0
 
-// 500 writes per batch is the Firestore limit; each parish costs up to two.
-for (let i = 0; i < parishes.length; i += 200) {
-  const chunk = parishes.slice(i, i + 200)
+// Only parish records are written. Pastor names and phone numbers are entered
+// by the pastors themselves, so seeding them would put unconfirmed details in
+// front of the province and quietly go stale.
+for (let i = 0; i < parishes.length; i += 400) {
+  const chunk = parishes.slice(i, i + 400)
   const batch = db.batch()
 
   for (const p of chunk) {
-    const { id, phone, ...rest } = p
+    const { id, ...rest } = p
     batch.set(
       db.collection('parishes').doc(id),
       {
@@ -48,26 +49,13 @@ for (let i = 0; i < parishes.length; i += 200) {
       { merge: true },
     )
     written += 1
-
-    if (phone) {
-      batch.set(
-        db.collection('parishContacts').doc(id),
-        {
-          phone,
-          createdAt: FieldValue.serverTimestamp(),
-          updatedAt: FieldValue.serverTimestamp(),
-        },
-        { merge: true },
-      )
-      contacts += 1
-    }
   }
 
   if (!dryRun) await batch.commit()
   console.log(`  …${Math.min(i + chunk.length, parishes.length)}/${parishes.length}`)
 }
 
-console.log(`\nDone. ${written} parishes, ${contacts} phone numbers.`)
+console.log(`\nDone. ${written} parishes.`)
 if (notes?.length) {
   console.log('\nCheck these before going live:')
   for (const note of notes) console.log(`  • ${note}`)

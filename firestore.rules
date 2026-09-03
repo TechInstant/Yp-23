@@ -57,46 +57,40 @@ service cloud.firestore {
       allow create: if isAdmin() ||
                     (
                       incoming().keys().hasOnly([
-                        'name', 'pastorName', 'address', 'family', 'zone', 'area',
+                        'name', 'pastorName', 'location', 'zone', 'area', 'category',
                         'ordinationStatus', 'yearOfOrdination', 'lengthOfService',
                         'status', 'source', 'createdAt', 'updatedAt'
                       ])
-                    && incoming().name is string
-                    && incoming().name.size() >= 2
-                    && incoming().name.size() <= 120
-                    && incoming().pastorName is string
-                    && incoming().pastorName.size() >= 2
-                    && incoming().pastorName.size() <= 120
-                    && incoming().address is string
-                    && incoming().address.size() <= 300
-                    && incoming().family in ['IFE', 'EDE']
-                    && incoming().zone is string
-                    && incoming().zone.size() <= 120
-                    && incoming().area is string
-                    && incoming().area.size() <= 120
+                      && incoming().name is string
+                      && incoming().name.size() >= 2
+                      && incoming().name.size() <= 120
+                      && incoming().pastorName is string
+                      && incoming().pastorName.size() >= 2
+                      && incoming().pastorName.size() <= 120
+                      && incoming().location in ['IFE', 'EDE']
+                      && incoming().zone is string
+                      && incoming().zone.size() <= 120
+                      && incoming().area is string
+                      && incoming().area.size() <= 120
                       && incoming().status == 'pending'
                       && incoming().source == 'self-registration'
                       && incoming().createdAt == request.time
                     );
 
-      // Claiming a parish. The province directory is loaded with parish names
-      // and their zone/area but no pastor, so the pastor in charge fills in
-      // their own details from the public form. It is a one-time write: once
-      // pastorName is set this branch stops matching, and only an admin can
-      // change it afterwards. Nothing here can touch name, family, zone, area
-      // or status.
+      // Claiming a parish: the pastor in charge writes their own name against a
+      // parish already in the directory. Only the name — the location, zone and
+      // area come from the directory, and the phone number goes to
+      // parishContacts. Re-claiming is allowed so a parish that changes hands
+      // is not stuck with the previous pastor's name until an admin intervenes;
+      // the province sees every change through the contact card's updatedAt.
       allow update: if isAdmin() ||
                     (
-                      resource.data.pastorName == ''
-                      && incoming().diff(resource.data).affectedKeys().hasOnly([
-                           'pastorName', 'ordinationStatus', 'yearOfOrdination',
-                           'lengthOfService', 'address', 'updatedAt'
-                         ])
+                      incoming().diff(resource.data).affectedKeys().hasOnly([
+                        'pastorName', 'updatedAt'
+                      ])
                       && incoming().pastorName is string
                       && incoming().pastorName.size() >= 2
                       && incoming().pastorName.size() <= 120
-                      && incoming().address is string
-                      && incoming().address.size() <= 300
                     );
 
       allow delete: if isAdmin();
@@ -107,19 +101,32 @@ service cloud.firestore {
       // parish record itself is.
       allow read: if isAdmin();
 
-      // Write-once from the registration form; after that only an admin can
-      // change it. Admins may also create one outright — including an empty
-      // phone, for a parish added before its number is known.
-      allow create: if isAdmin() ||
-                    (
-                      incoming().keys().hasOnly(['phone', 'createdAt', 'updatedAt'])
-                      && incoming().phone is string
-                      && incoming().phone.size() >= 7
-                      && incoming().phone.size() <= 25
-                      && incoming().createdAt == request.time
-                    );
+      // Every attendance submission carries the filing pastor's name and phone,
+      // and refreshes this card — otherwise the province's contact list would
+      // still hold whoever was in charge in 2026. So writes are open to the
+      // public, in the same narrow shape as the submission form, and are
+      // limited to contact fields: nothing here reaches the parish record, the
+      // attendance figures, or the admin list.
+      //
+      // Anyone who can submit attendance can therefore also change a contact
+      // number. That is the same trust level the attendance form already grants,
+      // and an admin can correct it — whereas locking it to write-once would
+      // freeze the directory the first time a pastor filed a return.
+      function validContact() {
+        return incoming().keys().hasOnly([
+                 'phone', 'pastorName', 'lastSeenOn', 'createdAt', 'updatedAt'
+               ])
+               && incoming().phone is string
+               && incoming().phone.size() >= 7
+               && incoming().phone.size() <= 25
+               && incoming().pastorName is string
+               && incoming().pastorName.size() >= 2
+               && incoming().pastorName.size() <= 120;
+      }
 
-      allow update, delete: if isAdmin();
+      allow create: if isAdmin() || validContact();
+      allow update: if isAdmin() || validContact();
+      allow delete: if isAdmin();
     }
 
     match /attendance/{recordId} {
@@ -133,11 +140,16 @@ service cloud.firestore {
                     (
                       recordId == incoming().parishId + '_' + incoming().date
                       && incoming().keys().hasOnly([
-                           'parishId', 'parishName', 'family', 'zone', 'area',
-                           'date', 'attendance', 'note', 'source', 'createdAt', 'updatedAt'
+                           'parishId', 'parishName', 'pastorName', 'location',
+                           'zone', 'area', 'category', 'date', 'attendance',
+                           'note', 'source', 'createdAt', 'updatedAt'
                          ])
                       && exists(/databases/$(database)/documents/parishes/$(incoming().parishId))
                       && isTrackedSunday(incoming().date)
+                      && incoming().location in ['IFE', 'EDE']
+                      && incoming().pastorName is string
+                      && incoming().pastorName.size() >= 2
+                      && incoming().pastorName.size() <= 120
                       && incoming().attendance is int
                       && incoming().attendance >= 0
                       && incoming().attendance <= 100000

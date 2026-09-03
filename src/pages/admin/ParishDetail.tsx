@@ -11,7 +11,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
-import { Alert, FamilyBadge, Spinner, StatTile, StatusBadge } from '../../components/ui'
+import { Alert, LocationBadge, Spinner, StatTile, StatusBadge } from '../../components/ui'
 import { useParishContacts } from '../../hooks/useParishContacts'
 import { useParishes } from '../../hooks/useParishes'
 import { AXIS_TICK, CHART, TOOLTIP_STYLE } from '../../lib/chartTheme'
@@ -88,7 +88,7 @@ export default function ParishDetail() {
         </Link>
         <div className="mt-2 flex flex-wrap items-center gap-3">
           <h1 className="text-2xl font-bold text-navy-900">{parish.name}</h1>
-          <FamilyBadge family={parish.family} />
+          <LocationBadge location={parish.location} />
           <StatusBadge status={parish.status} />
         </div>
         <p className="mt-1 text-sm text-navy-600">
@@ -99,7 +99,6 @@ export default function ParishDetail() {
         <p className="mt-0.5 text-sm text-navy-500">
           {[parish.zone, parish.area].filter(Boolean).join(' · ') || 'No zone or area set'}
         </p>
-        {parish.address && <p className="mt-0.5 text-sm text-navy-500">{parish.address}</p>}
         {phones[parish.id] && (
           <p className="mt-1 text-sm">
             <a href={`tel:${phones[parish.id]}`} className="font-medium text-navy-800 hover:underline">

@@ -5,6 +5,11 @@ import Logo from './Logo'
 
 const NAV = [
   { to: '/admin/dashboard', label: 'Dashboard', icon: 'M3 12h4l3 7 4-14 3 7h4' },
+  {
+    to: '/admin/pastors',
+    label: 'Pastors',
+    icon: 'M16 20v-1a4 4 0 00-4-4H8a4 4 0 00-4 4v1M10 11a3.5 3.5 0 100-7 3.5 3.5 0 000 7M17 4.5a3 3 0 010 6M20 20v-1a3.5 3.5 0 00-2.5-3.4',
+  },
   { to: '/admin/parishes', label: 'Parishes', icon: 'M4 20V9l6-4 6 4v11M9 20v-5h4v5' },
   { to: '/admin/attendance', label: 'Attendance', icon: 'M4 5h14M4 10h14M4 15h9' },
 ]

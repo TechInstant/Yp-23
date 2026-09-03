@@ -66,7 +66,7 @@ export default function Login() {
           <div className="card p-7">
             <h1 className="text-xl font-bold text-navy-900">Provincial admin sign in</h1>
             <p className="mt-1.5 text-sm text-navy-600">
-              For province and family executives only. Parishes submit attendance without an
+              For province and location executives only. Parishes submit attendance without an
               account.
             </p>
 

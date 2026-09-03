@@ -166,14 +166,14 @@ export function Modal({
   )
 }
 
-export function FamilyBadge({ family }: { family: string }) {
+export function LocationBadge({ location }: { location: string }) {
   return (
     <span
       className={`badge ${
-        family === 'IFE' ? 'bg-navy-100 text-navy-800' : 'bg-gold-100 text-gold-800'
+        location === 'IFE' ? 'bg-navy-100 text-navy-800' : 'bg-gold-100 text-gold-800'
       }`}
     >
-      {family}
+      {location}
     </span>
   )
 }

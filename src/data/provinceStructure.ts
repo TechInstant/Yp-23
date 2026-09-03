@@ -1,7 +1,7 @@
 import type { ChurchCategory, LocationCode } from '../types'
 
 /**
- * Youth Province 23 in full: Province → Family → Zone → Area → Parish, exactly
+ * Youth Province 23 in full: Province → LocationCode → Zone → Area → Parish, exactly
  * as published in the two "Directory after Province Creation" documents.
  *
  * This is church structure only — parish names and where they sit. It carries

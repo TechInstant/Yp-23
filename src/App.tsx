@@ -13,6 +13,7 @@ import Dashboard from './pages/admin/Dashboard'
 import Login from './pages/admin/Login'
 import ParishDetail from './pages/admin/ParishDetail'
 import ParishesAdmin from './pages/admin/ParishesAdmin'
+import Pastors from './pages/admin/Pastors'
 
 export default function App() {
   if (missingFirebaseConfig.length > 0) {
@@ -77,6 +78,7 @@ export default function App() {
           }
         >
           <Route path="dashboard" element={<Dashboard />} />
+          <Route path="pastors" element={<Pastors />} />
           <Route path="parishes" element={<ParishesAdmin />} />
           <Route path="parishes/:parishId" element={<ParishDetail />} />
           <Route path="attendance" element={<AttendanceAdmin />} />

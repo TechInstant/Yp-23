@@ -1,15 +1,18 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore'
+import SundayPicker from '../components/SundayPicker'
 import { Alert, Field, Spinner } from '../components/ui'
 import { useParishes } from '../hooks/useParishes'
 import { COLLECTIONS, db } from '../lib/firebase'
 import {
-  currentReportingSunday,
   formatSundayLong,
-  selectableSundays,
+  hasStarted,
+  isSelectableSunday,
+  latestSelectableSunday,
+  SEASON_START,
 } from '../lib/sundays'
-import { FAMILIES, FAMILY_LABEL, type Family, type Parish } from '../types'
+import { LOCATION_LABEL, type LocationCode, type Parish } from '../types'
 
 type Status =
   | { kind: 'idle' }
@@ -17,39 +20,43 @@ type Status =
   | { kind: 'saved'; parish: string; date: string; attendance: number }
   | { kind: 'error'; message: string }
 
-export default function SubmitAttendance() {
-  const { active, zonesByFamily, areasByZone, loading, error } = useParishes()
+/** Nigerian numbers as written in the directory: 11 digits, or the +234 form. */
+function normalisePhone(raw: string): string {
+  return raw.replace(/[^\d+]/g, '')
+}
 
-  const [family, setFamily] = useState<Family | ''>('')
-  const [zone, setZone] = useState('')
-  const [area, setArea] = useState('')
+export default function SubmitAttendance() {
+  const { active, loading, error } = useParishes()
+
   const [parishId, setParishId] = useState('')
-  const [date, setDate] = useState(() => currentReportingSunday())
+  const [pastorName, setPastorName] = useState('')
+  const [phone, setPhone] = useState('')
+  const [date, setDate] = useState(() => latestSelectableSunday())
   const [attendance, setAttendance] = useState('')
   const [note, setNote] = useState('')
+
   const [status, setStatus] = useState<Status>({ kind: 'idle' })
   const [existing, setExisting] = useState<{ attendance: number } | null>(null)
   const [checking, setChecking] = useState(false)
 
-  const sundays = useMemo(() => selectableSundays().slice().reverse(), [])
-
-  const zones = family ? (zonesByFamily[family] ?? []) : []
-  const areas = zone ? (areasByZone[zone] ?? []) : []
-
-  const candidates = useMemo(() => {
-    return active.filter(
-      (p) =>
-        (!family || p.family === family) &&
-        (!zone || p.zone === zone) &&
-        (!area || p.area === area),
-    )
-  }, [active, family, zone, area])
-
+  const started = hasStarted()
   const parish = active.find((p) => p.id === parishId) ?? null
 
+  /** Grouped by location so a 37-entry dropdown stays navigable. */
+  const grouped = useMemo(() => {
+    const map = new Map<LocationCode, Parish[]>()
+    for (const p of active) {
+      const list = map.get(p.location)
+      if (list) list.push(p)
+      else map.set(p.location, [p])
+    }
+    for (const list of map.values()) list.sort((a, b) => a.name.localeCompare(b.name))
+    return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0]))
+  }, [active])
+
   // Show what is already on file for this parish/Sunday before the pastor
-  // types a figure — the write itself is create-only, so a silent duplicate is
-  // impossible, but finding that out *after* filling the form is annoying.
+  // fills anything in — the write is create-only, so a duplicate is impossible,
+  // but discovering that after typing is needlessly annoying.
   useEffect(() => {
     if (!parishId || !date) {
       setExisting(null)
@@ -73,25 +80,32 @@ export default function SubmitAttendance() {
     }
   }, [parishId, date])
 
-  function resetSelection(next: Partial<{ family: Family | ''; zone: string; area: string }>) {
-    if ('family' in next) {
-      setFamily(next.family as Family | '')
-      setZone('')
-      setArea('')
-      setParishId('')
-    } else if ('zone' in next) {
-      setZone(next.zone as string)
-      setArea('')
-      setParishId('')
-    } else if ('area' in next) {
-      setArea(next.area as string)
-      setParishId('')
-    }
-  }
-
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault()
     if (!parish) return
+
+    if (pastorName.trim().length < 2) {
+      setStatus({ kind: 'error', message: 'Enter the name of the pastor filing this return.' })
+      return
+    }
+
+    const cleanPhone = normalisePhone(phone)
+    if (cleanPhone.length < 7 || cleanPhone.length > 25) {
+      setStatus({ kind: 'error', message: 'Enter a reachable phone number.' })
+      return
+    }
+
+    // The calendar only offers valid Sundays, but the value could be stale if
+    // the form sat open across midnight on a Saturday.
+    if (!isSelectableSunday(date)) {
+      setStatus({
+        kind: 'error',
+        message: date
+          ? `${formatSundayLong(date)} cannot be reported yet — pick a Sunday that has already passed.`
+          : 'Choose the Sunday this attendance is for.',
+      })
+      return
+    }
 
     const count = Number(attendance)
     if (!Number.isInteger(count) || count < 0) {
@@ -104,9 +118,11 @@ export default function SubmitAttendance() {
       await setDoc(doc(db, COLLECTIONS.attendance, `${parish.id}_${date}`), {
         parishId: parish.id,
         parishName: parish.name,
-        family: parish.family,
+        pastorName: pastorName.trim(),
+        location: parish.location,
         zone: parish.zone,
         area: parish.area,
+        category: parish.category,
         date,
         attendance: count,
         note: note.trim(),
@@ -114,6 +130,24 @@ export default function SubmitAttendance() {
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       })
+
+      // Refresh the province's contact card for this parish. Best-effort: the
+      // return is already saved and is the thing that matters.
+      try {
+        await setDoc(
+          doc(db, COLLECTIONS.parishContacts, parish.id),
+          {
+            phone: cleanPhone,
+            pastorName: pastorName.trim(),
+            lastSeenOn: date,
+            updatedAt: serverTimestamp(),
+          },
+          { merge: true },
+        )
+      } catch {
+        /* contact refresh is not worth failing the submission over */
+      }
+
       setStatus({ kind: 'saved', parish: parish.name, date, attendance: count })
       setAttendance('')
       setNote('')
@@ -143,9 +177,16 @@ export default function SubmitAttendance() {
       <header>
         <h1 className="text-2xl font-bold text-navy-900">Submit Sunday attendance</h1>
         <p className="mt-2 text-navy-600">
-          One figure per parish per Sunday: the total number present at the Sunday service.
+          One return per parish per Sunday — the total number present at the service.
         </p>
       </header>
+
+      {!started && (
+        <Alert tone="warning" title="Returns are not open yet">
+          The exercise begins on <strong>{formatSundayLong(SEASON_START)}</strong>. You can fill
+          this form in from that Sunday onwards.
+        </Alert>
+      )}
 
       {status.kind === 'saved' && (
         <Alert tone="success" title="Return recorded">
@@ -154,8 +195,7 @@ export default function SubmitAttendance() {
             <strong>{status.attendance.toLocaleString()}</strong> in attendance.
           </p>
           <p className="mt-1">
-            Need to submit for another parish? Change the selection below and enter the next
-            figure.
+            Submitting for another parish? Change the parish below and enter the next figure.
           </p>
         </Alert>
       )}
@@ -167,96 +207,72 @@ export default function SubmitAttendance() {
       )}
 
       <form onSubmit={handleSubmit} className="card space-y-5 p-6">
-        <div className="grid gap-5 sm:grid-cols-2">
-          <Field label="Family" required>
-            <select
-              className="input"
-              value={family}
-              onChange={(e) => resetSelection({ family: e.target.value as Family | '' })}
-              required
-            >
-              <option value="">Select family…</option>
-              {FAMILIES.map((f) => (
-                <option key={f} value={f}>
-                  {FAMILY_LABEL[f]}
-                </option>
-              ))}
-            </select>
-          </Field>
-
-          <Field label="Zone" hint={family ? undefined : 'Choose a family first'}>
-            <select
-              className="input"
-              value={zone}
-              onChange={(e) => resetSelection({ zone: e.target.value })}
-              disabled={!family}
-            >
-              <option value="">All zones</option>
-              {zones.map((z) => (
-                <option key={z} value={z}>
-                  {z}
-                </option>
-              ))}
-            </select>
-          </Field>
-
-          <Field label="Area" hint={zone ? undefined : 'Choose a zone first'}>
-            <select
-              className="input"
-              value={area}
-              onChange={(e) => resetSelection({ area: e.target.value })}
-              disabled={!zone}
-            >
-              <option value="">All areas</option>
-              {areas.map((a) => (
-                <option key={a} value={a}>
-                  {a}
-                </option>
-              ))}
-            </select>
-          </Field>
-
-          <Field
-            label="Parish"
+        <Field label="Parish" required hint="Can't find yours? Register it first — link below.">
+          <select
+            className="input"
+            value={parishId}
+            onChange={(e) => setParishId(e.target.value)}
             required
-            hint={
-              candidates.length === 0 && family
-                ? 'No parish matches that selection.'
-                : `${candidates.length} parish${candidates.length === 1 ? '' : 'es'} to choose from`
-            }
           >
-            <select
+            <option value="">Select your parish…</option>
+            {grouped.map(([location, list]) => (
+              <optgroup key={location} label={LOCATION_LABEL[location]}>
+                {list.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </optgroup>
+            ))}
+          </select>
+        </Field>
+
+        {parish && (
+          <div className="rounded-lg bg-navy-50 px-4 py-3 text-sm">
+            <p className="font-semibold text-navy-900">{parish.name}</p>
+            <p className="mt-0.5 text-navy-600">
+              {LOCATION_LABEL[parish.location]}
+              {parish.zone && ` · ${parish.zone}`}
+              {parish.area && ` · ${parish.area}`}
+            </p>
+          </div>
+        )}
+
+        <div className="grid gap-5 sm:grid-cols-2">
+          <Field label="Name of the pastor" required>
+            <input
               className="input"
-              value={parishId}
-              onChange={(e) => setParishId(e.target.value)}
+              value={pastorName}
+              onChange={(e) => setPastorName(e.target.value)}
+              placeholder="e.g. PST AMAS AMAJO"
+              maxLength={120}
+              autoComplete="name"
               required
-            >
-              <option value="">Select parish…</option>
-              {candidates.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
+            />
+          </Field>
+
+          <Field label="Phone number" required hint="Seen only by provincial admins.">
+            <input
+              className="input"
+              type="tel"
+              inputMode="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="e.g. 07034936069"
+              maxLength={25}
+              autoComplete="tel"
+              required
+            />
           </Field>
         </div>
 
-        {parish && <ParishSummary parish={parish} />}
-
         <div className="grid gap-5 sm:grid-cols-2">
-          <Field label="Sunday" required hint="Only Sundays inside the tracking window appear.">
-            <select
-              className="input"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              required
-            >
-              {sundays.map((d) => (
-                <option key={d} value={d}>
-                  {formatSundayLong(d)}
-                </option>
-              ))}
-            </select>
+          <Field
+            label="Sunday"
+            required
+            hint="Only Sundays that have already happened can be chosen."
+          >
+            <SundayPicker value={date} onChange={setDate} />
           </Field>
 
           <Field label="Number in attendance" required>
@@ -279,13 +295,16 @@ export default function SubmitAttendance() {
 
         {existing && status.kind !== 'saved' && (
           <Alert tone="warning" title="Already submitted">
-            A return of <strong>{existing.attendance.toLocaleString()}</strong> is on file for
-            this parish on {formatSundayLong(date)}. Submitting again will be rejected — contact
-            the provincial admin if the figure needs correcting.
+            A return of <strong>{existing.attendance.toLocaleString()}</strong> is on file for this
+            parish on {formatSundayLong(date)}. Submitting again will be rejected — contact the
+            provincial admin if the figure needs correcting.
           </Alert>
         )}
 
-        <Field label="Note (optional)" hint="Convention, joint service, harvest — anything that explains an unusual figure.">
+        <Field
+          label="Note (optional)"
+          hint="Convention, joint service, harvest — anything that explains an unusual figure."
+        >
           <textarea
             className="input min-h-[80px] resize-y"
             maxLength={300}
@@ -299,7 +318,7 @@ export default function SubmitAttendance() {
           <button
             type="submit"
             className="btn-primary"
-            disabled={status.kind === 'saving' || !parish || Boolean(existing)}
+            disabled={status.kind === 'saving' || !parish || Boolean(existing) || !started}
           >
             {status.kind === 'saving' ? 'Saving…' : 'Submit attendance'}
           </button>
@@ -311,20 +330,6 @@ export default function SubmitAttendance() {
           </span>
         </div>
       </form>
-    </div>
-  )
-}
-
-function ParishSummary({ parish }: { parish: Parish }) {
-  return (
-    <div className="rounded-lg bg-navy-50 px-4 py-3 text-sm">
-      <p className="font-semibold text-navy-900">{parish.name}</p>
-      <p className="mt-0.5 text-navy-600">
-        {parish.pastorName}
-        {parish.zone && ` · ${parish.zone}`}
-        {parish.area && ` · ${parish.area}`}
-      </p>
-      {parish.address && <p className="mt-0.5 text-navy-500">{parish.address}</p>}
     </div>
   )
 }

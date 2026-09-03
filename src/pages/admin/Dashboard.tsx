@@ -2,19 +2,20 @@ import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   Area,
-  AreaChart,
   Bar,
   BarChart,
   CartesianGrid,
   Cell,
+  ComposedChart,
   Legend,
+  Line,
   ReferenceLine,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
 } from 'recharts'
-import { Alert, FamilyBadge, Spinner, StatTile } from '../../components/ui'
+import { Alert, LocationBadge, Spinner, StatTile } from '../../components/ui'
 import { useAttendance } from '../../hooks/useAttendance'
 import { useParishes } from '../../hooks/useParishes'
 import {
@@ -23,6 +24,7 @@ import {
   missingReturns,
   parishGrowth,
   totalsBySunday,
+  withRollingAverage,
   type ParishGrowth,
 } from '../../lib/analytics'
 import { AXIS_TICK, CHART, TOOLTIP_STYLE } from '../../lib/chartTheme'
@@ -35,7 +37,7 @@ import {
   resolveRange,
   type RangePresetKey,
 } from '../../lib/sundays'
-import { FAMILY_LABEL } from '../../types'
+import { LOCATION_LABEL } from '../../types'
 
 export default function Dashboard() {
   const [preset, setPreset] = useState<RangePresetKey>('last26')
@@ -44,7 +46,10 @@ export default function Dashboard() {
   const { parishes, active, loading: parishesLoading } = useParishes()
   const { records, loading: recordsLoading, error } = useAttendance(range)
 
-  const series = useMemo(() => totalsBySunday(records, range), [records, range])
+  const series = useMemo(
+    () => withRollingAverage(totalsBySunday(records, range)),
+    [records, range],
+  )
   const growth = useMemo(() => parishGrowth(records, active), [records, active])
   const stats = useMemo(() => headline(records, parishes, growth), [records, parishes, growth])
   const zones = useMemo(() => groupBy(records, 'zone'), [records])
@@ -77,7 +82,7 @@ export default function Dashboard() {
       toCsv(
         ranked.map((g) => ({
           parish: g.parishName,
-          family: g.family,
+          location: g.location,
           zone: g.zone,
           area: g.area,
           returns: g.returns,
@@ -91,7 +96,7 @@ export default function Dashboard() {
         })),
         [
           { key: 'parish', header: 'Parish' },
-          { key: 'family', header: 'Family' },
+          { key: 'location', header: 'Location' },
           { key: 'zone', header: 'Zone' },
           { key: 'area', header: 'Area' },
           { key: 'returns', header: 'Returns' },
@@ -191,14 +196,24 @@ export default function Dashboard() {
 
           <section className="card p-5 sm:p-6">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
-              <h2 className="text-lg font-semibold text-navy-900">Attendance by family</h2>
+              <h2 className="text-lg font-semibold text-navy-900">Attendance by location</h2>
               <p className="text-sm text-navy-500">
-                Stacked — the top of the band is the province total
+                Stacked bands are the two locations; the dark line is the 4-Sunday average
               </p>
             </div>
             <div className="mt-6 h-80">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={series} margin={{ top: 4, right: 8, bottom: 0, left: -8 }}>
+                <ComposedChart data={series} margin={{ top: 4, right: 8, bottom: 0, left: -8 }}>
+                  <defs>
+                    <linearGradient id="fillIfe" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor={CHART.categorical.IFE} stopOpacity={0.45} />
+                      <stop offset="100%" stopColor={CHART.categorical.IFE} stopOpacity={0.06} />
+                    </linearGradient>
+                    <linearGradient id="fillEde" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor={CHART.categorical.EDE} stopOpacity={0.45} />
+                      <stop offset="100%" stopColor={CHART.categorical.EDE} stopOpacity={0.06} />
+                    </linearGradient>
+                  </defs>
                   <CartesianGrid stroke={CHART.grid} vertical={false} />
                   <XAxis
                     dataKey="date"
@@ -219,8 +234,10 @@ export default function Dashboard() {
                     cursor={{ stroke: CHART.reference, strokeWidth: 1 }}
                     labelFormatter={(v) => formatSundayLong(String(v))}
                     formatter={(value: number, name: string) => [
-                      value.toLocaleString(),
-                      FAMILY_LABEL[name as 'IFE' | 'EDE'] ?? name,
+                      value === null ? '—' : value.toLocaleString(),
+                      name === 'rollingAverage'
+                        ? '4-Sunday average'
+                        : (LOCATION_LABEL[name as 'IFE' | 'EDE'] ?? name),
                     ]}
                     contentStyle={TOOLTIP_STYLE}
                   />
@@ -232,7 +249,9 @@ export default function Dashboard() {
                     iconSize={9}
                     formatter={(value: string) => (
                       <span className="text-sm text-navy-700">
-                        {FAMILY_LABEL[value as 'IFE' | 'EDE'] ?? value}
+                        {value === 'rollingAverage'
+                          ? '4-Sunday average'
+                          : (LOCATION_LABEL[value as 'IFE' | 'EDE'] ?? value)}
                       </span>
                     )}
                   />
@@ -242,8 +261,7 @@ export default function Dashboard() {
                     stackId="attendance"
                     stroke={CHART.categorical.IFE}
                     strokeWidth={2}
-                    fill={CHART.categorical.IFE}
-                    fillOpacity={0.22}
+                    fill="url(#fillIfe)"
                   />
                   <Area
                     type="monotone"
@@ -251,12 +269,26 @@ export default function Dashboard() {
                     stackId="attendance"
                     stroke={CHART.categorical.EDE}
                     strokeWidth={2}
-                    fill={CHART.categorical.EDE}
-                    fillOpacity={0.22}
+                    fill="url(#fillEde)"
                   />
-                </AreaChart>
+                  <Line
+                    type="monotone"
+                    dataKey="rollingAverage"
+                    stroke={CHART.single}
+                    strokeWidth={2.5}
+                    strokeDasharray="6 3"
+                    dot={false}
+                    activeDot={{ r: 5 }}
+                    connectNulls
+                  />
+                </ComposedChart>
               </ResponsiveContainer>
             </div>
+            <p className="mt-4 text-sm text-navy-500">
+              The average line is the growth reading: when it climbs the province is genuinely
+              growing, where a single Sunday&apos;s spike or dip is usually just weather or a
+              convention. Sundays with no returns are skipped rather than counted as zero.
+            </p>
           </section>
 
           <div className="grid gap-6 xl:grid-cols-2">
@@ -474,7 +506,7 @@ export default function Dashboard() {
                         >
                           {p.name}
                         </Link>
-                        <FamilyBadge family={p.family} />
+                        <LocationBadge location={p.location} />
                       </li>
                     ))}
                   </ul>

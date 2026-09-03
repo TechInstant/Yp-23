@@ -8,6 +8,7 @@ import {
   updateDoc,
   writeBatch,
 } from 'firebase/firestore'
+import SundayPicker from '../../components/SundayPicker'
 import { Alert, EmptyState, Field, Modal, Spinner } from '../../components/ui'
 import { useAttendance } from '../../hooks/useAttendance'
 import { useParishes } from '../../hooks/useParishes'
@@ -15,14 +16,14 @@ import { downloadCsv, parseCsv, toCsv } from '../../lib/csv'
 import { COLLECTIONS, db } from '../../lib/firebase'
 import {
   formatSundayLong,
+  isSelectableSunday,
   isTrackedSunday,
+  latestSelectableSunday,
   RANGE_PRESETS,
   resolveRange,
-  selectableSundays,
-  currentReportingSunday,
   type RangePresetKey,
 } from '../../lib/sundays'
-import { FAMILIES, FAMILY_LABEL, type AttendanceRecord, type Family } from '../../types'
+import { LOCATIONS, LOCATION_LABEL, type AttendanceRecord, type LocationCode } from '../../types'
 
 export default function AttendanceAdmin() {
   const [preset, setPreset] = useState<RangePresetKey>('last8')
@@ -32,24 +33,22 @@ export default function AttendanceAdmin() {
   const { records, loading, error } = useAttendance(range)
 
   const [search, setSearch] = useState('')
-  const [family, setFamily] = useState<Family | ''>('')
+  const [location, setLocation] = useState<LocationCode | ''>('')
   const [editing, setEditing] = useState<AttendanceRecord | null>(null)
   const [adding, setAdding] = useState(false)
   const [message, setMessage] = useState<{ tone: 'success' | 'error'; text: string } | null>(null)
   const fileInput = useRef<HTMLInputElement>(null)
 
-  const sundays = useMemo(() => selectableSundays().slice().reverse(), [])
-
   const filtered = useMemo(() => {
     const needle = search.trim().toLowerCase()
     return [...records]
       .filter((r) => {
-        if (family && r.family !== family) return false
+        if (location && r.location !== location) return false
         if (!needle) return true
         return [r.parishName, r.zone, r.area, r.note].join(' ').toLowerCase().includes(needle)
       })
       .sort((a, b) => b.date.localeCompare(a.date) || a.parishName.localeCompare(b.parishName))
-  }, [records, search, family])
+  }, [records, search, location])
 
   const total = filtered.reduce((s, r) => s + r.attendance, 0)
 
@@ -122,7 +121,7 @@ export default function AttendanceAdmin() {
             {
               parishId: v.parish.id,
               parishName: v.parish.name,
-              family: v.parish.family,
+              location: v.parish.location,
               zone: v.parish.zone,
               area: v.parish.area,
               date: v.date,
@@ -164,7 +163,7 @@ export default function AttendanceAdmin() {
       toCsv(filtered, [
         { key: 'date', header: 'Sunday' },
         { key: 'parishName', header: 'Parish' },
-        { key: 'family', header: 'Family' },
+        { key: 'location', header: 'Location' },
         { key: 'zone', header: 'Zone' },
         { key: 'area', header: 'Area' },
         { key: 'attendance', header: 'Attendance' },
@@ -236,13 +235,13 @@ export default function AttendanceAdmin() {
         />
         <select
           className="input sm:max-w-[180px]"
-          value={family}
-          onChange={(e) => setFamily(e.target.value as Family | '')}
+          value={location}
+          onChange={(e) => setLocation(e.target.value as LocationCode | '')}
         >
-          <option value="">Both families</option>
-          {FAMILIES.map((f) => (
+          <option value="">Both locations</option>
+          {LOCATIONS.map((f) => (
             <option key={f} value={f}>
-              {FAMILY_LABEL[f]}
+              {LOCATION_LABEL[f]}
             </option>
           ))}
         </select>
@@ -278,7 +277,7 @@ export default function AttendanceAdmin() {
                     >
                       {r.parishName}
                     </Link>
-                    <div className="text-xs text-navy-500">{FAMILY_LABEL[r.family]}</div>
+                    <div className="text-xs text-navy-500">{LOCATION_LABEL[r.location]}</div>
                   </td>
                   <td className="td text-navy-600">
                     <div>{r.zone || '—'}</div>
@@ -320,7 +319,6 @@ export default function AttendanceAdmin() {
       <AddModal
         open={adding}
         parishes={active}
-        sundays={sundays}
         onClose={() => setAdding(false)}
         onSaved={(text) => {
           setMessage({ tone: 'success', text })
@@ -407,20 +405,18 @@ function EditModal({
 function AddModal({
   open,
   parishes,
-  sundays,
   onClose,
   onSaved,
   onError,
 }: {
   open: boolean
-  parishes: { id: string; name: string; family: Family; zone: string; area: string }[]
-  sundays: string[]
+  parishes: { id: string; name: string; location: LocationCode; zone: string; area: string }[]
   onClose: () => void
   onSaved: (text: string) => void
   onError: (text: string) => void
 }) {
   const [parishId, setParishId] = useState('')
-  const [date, setDate] = useState(() => currentReportingSunday())
+  const [date, setDate] = useState(() => latestSelectableSunday())
   const [value, setValue] = useState('')
   const [note, setNote] = useState('')
   const [busy, setBusy] = useState(false)
@@ -428,6 +424,14 @@ function AddModal({
   async function save() {
     const parish = parishes.find((p) => p.id === parishId)
     if (!parish) return
+    if (!isSelectableSunday(date)) {
+      onError(
+        date
+          ? `${formatSundayLong(date)} has not happened yet.`
+          : 'Choose the Sunday this attendance is for.',
+      )
+      return
+    }
     const count = Number(value)
     if (!Number.isInteger(count) || count < 0) {
       onError('Attendance must be a whole number, 0 or more.')
@@ -442,7 +446,7 @@ function AddModal({
         {
           parishId: parish.id,
           parishName: parish.name,
-          family: parish.family,
+          location: parish.location,
           zone: parish.zone,
           area: parish.area,
           date,
@@ -491,20 +495,14 @@ function AddModal({
             <option value="">Select parish…</option>
             {parishes.map((p) => (
               <option key={p.id} value={p.id}>
-                {p.name} ({p.family})
+                {p.name} ({p.location})
               </option>
             ))}
           </select>
         </Field>
         <div className="grid gap-5 sm:grid-cols-2">
           <Field label="Sunday" required>
-            <select className="input" value={date} onChange={(e) => setDate(e.target.value)}>
-              {sundays.map((d) => (
-                <option key={d} value={d}>
-                  {formatSundayLong(d)}
-                </option>
-              ))}
-            </select>
+            <SundayPicker value={date} onChange={setDate} />
           </Field>
           <Field label="Number in attendance" required>
             <input

@@ -39,6 +39,46 @@ export function totalsBySunday(
   return [...buckets.values()]
 }
 
+export interface PointWithAverage extends PointTotals {
+  /** Mean attendance per reporting church that Sunday. */
+  perChurch: number
+  /** Trailing mean of `total` over `window` Sundays that had returns. */
+  rollingAverage: number | null
+}
+
+/**
+ * Adds the trailing average that the growth reading is based on.
+ *
+ * Raw Sunday totals bounce around too much to answer "are we growing?" — a
+ * rainy Sunday or a convention swings them by a third. The trailing mean is the
+ * line to actually read, and it is the same measure the per-parish growth
+ * percentages use, so the chart and the table cannot tell different stories.
+ *
+ * Sundays with no returns are skipped rather than counted as zero: a missing
+ * return is missing data, not an empty church, and averaging it in would drag
+ * the line down and invent a decline.
+ */
+export function withRollingAverage(
+  points: PointTotals[],
+  window = 4,
+): PointWithAverage[] {
+  const reported: number[] = []
+  return points.map((p) => {
+    if (p.reporting > 0) {
+      reported.push(p.total)
+      if (reported.length > window) reported.shift()
+    }
+    return {
+      ...p,
+      perChurch: p.reporting > 0 ? Math.round(p.total / p.reporting) : 0,
+      rollingAverage:
+        reported.length > 0
+          ? Math.round(reported.reduce((s, v) => s + v, 0) / reported.length)
+          : null,
+    }
+  })
+}
+
 export interface RemittanceTotals {
   key: string
   label: string

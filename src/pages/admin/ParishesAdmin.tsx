@@ -13,7 +13,7 @@ import {
 import {
   Alert,
   EmptyState,
-  FamilyBadge,
+  LocationBadge,
   Field,
   Modal,
   Spinner,
@@ -30,10 +30,10 @@ import { useParishes } from '../../hooks/useParishes'
 import { downloadCsv, parseCsv, toCsv } from '../../lib/csv'
 import { COLLECTIONS, db } from '../../lib/firebase'
 import {
-  FAMILIES,
-  FAMILY_LABEL,
+  LOCATIONS,
+  LOCATION_LABEL,
   ORDINATION_STATUSES,
-  type Family,
+  type LocationCode,
   type Parish,
   type ParishStatus,
 } from '../../types'
@@ -42,8 +42,7 @@ interface Draft {
   name: string
   pastorName: string
   phone: string
-  address: string
-  family: Family
+  location: LocationCode
   zone: string
   area: string
   ordinationStatus: string
@@ -56,8 +55,7 @@ const BLANK: Draft = {
   name: '',
   pastorName: '',
   phone: '',
-  address: '',
-  family: 'IFE',
+  location: 'IFE',
   zone: '',
   area: '',
   ordinationStatus: 'UNKNOWN',
@@ -71,8 +69,7 @@ function toDraft(parish: Parish, phone: string): Draft {
     name: parish.name,
     pastorName: parish.pastorName,
     phone,
-    address: parish.address ?? '',
-    family: parish.family,
+    location: parish.location,
     zone: parish.zone ?? '',
     area: parish.area ?? '',
     ordinationStatus: parish.ordinationStatus || 'UNKNOWN',
@@ -83,11 +80,11 @@ function toDraft(parish: Parish, phone: string): Draft {
 }
 
 export default function ParishesAdmin() {
-  const { parishes, zonesByFamily, areasByZone, loading } = useParishes()
+  const { parishes, zonesByLocation, areasByZone, loading } = useParishes()
   const { phones, refresh: refreshPhones } = useParishContacts()
 
   const [search, setSearch] = useState('')
-  const [family, setFamily] = useState<Family | ''>('')
+  const [location, setLocation] = useState<LocationCode | ''>('')
   const [status, setStatus] = useState<ParishStatus | ''>('')
 
   const [editing, setEditing] = useState<Parish | null>(null)
@@ -104,15 +101,15 @@ export default function ParishesAdmin() {
   const filtered = useMemo(() => {
     const needle = search.trim().toLowerCase()
     return parishes.filter((p) => {
-      if (family && p.family !== family) return false
+      if (location && p.location !== location) return false
       if (status && p.status !== status) return false
       if (!needle) return true
-      return [p.name, p.pastorName, p.zone, p.area, p.address, phones[p.id] ?? '']
+      return [p.name, p.pastorName, p.zone, p.area, phones[p.id] ?? '']
         .join(' ')
         .toLowerCase()
         .includes(needle)
     })
-  }, [parishes, search, family, status, phones])
+  }, [parishes, search, location, status, phones])
 
   function openCreate() {
     setDraft(BLANK)
@@ -149,8 +146,7 @@ export default function ParishesAdmin() {
       const payload = {
         name: draft.name.trim(),
         pastorName: draft.pastorName.trim(),
-        address: draft.address.trim(),
-        family: draft.family,
+        location: draft.location,
         zone: draft.zone.trim(),
         area: draft.area.trim(),
         ordinationStatus: draft.ordinationStatus,
@@ -268,10 +264,10 @@ export default function ParishesAdmin() {
           batch.set(doc(collection(db, COLLECTIONS.parishes)), {
             name: p.name,
             pastorName: '',
-            address: '',
-            family: p.family,
+            location: p.location,
             zone: p.zone,
             area: p.area,
+            category: p.category,
             ordinationStatus: 'UNKNOWN',
             yearOfOrdination: null,
             lengthOfService: '',
@@ -303,8 +299,7 @@ export default function ParishesAdmin() {
           name: p.name,
           pastorName: p.pastorName,
           phone: phones[p.id] ?? '',
-          address: p.address ?? '',
-          family: p.family,
+          location: p.location,
           zone: p.zone ?? '',
           area: p.area ?? '',
           ordinationStatus: p.ordinationStatus ?? '',
@@ -316,8 +311,7 @@ export default function ParishesAdmin() {
           { key: 'name', header: 'name' },
           { key: 'pastorName', header: 'pastorName' },
           { key: 'phone', header: 'phone' },
-          { key: 'address', header: 'address' },
-          { key: 'family', header: 'family' },
+          { key: 'location', header: 'location' },
           { key: 'zone', header: 'zone' },
           { key: 'area', header: 'area' },
           { key: 'ordinationStatus', header: 'ordinationStatus' },
@@ -356,8 +350,7 @@ export default function ParishesAdmin() {
           batch.set(ref, {
             name: row.name.trim(),
             pastorName: (row.pastorName ?? '').trim() || 'TO BE ASSIGNED',
-            address: (row.address ?? '').trim(),
-            family: row.family?.trim().toUpperCase() === 'EDE' ? 'EDE' : 'IFE',
+            location: row.location?.trim().toUpperCase() === 'EDE' ? 'EDE' : 'IFE',
             zone: (row.zone ?? '').trim(),
             area: (row.area ?? '').trim(),
             ordinationStatus: (row.ordinationStatus ?? '').trim() || 'UNKNOWN',
@@ -463,13 +456,13 @@ export default function ParishesAdmin() {
         />
         <select
           className="input sm:max-w-[180px]"
-          value={family}
-          onChange={(e) => setFamily(e.target.value as Family | '')}
+          value={location}
+          onChange={(e) => setLocation(e.target.value as LocationCode | '')}
         >
-          <option value="">Both families</option>
-          {FAMILIES.map((f) => (
+          <option value="">Both locations</option>
+          {LOCATIONS.map((f) => (
             <option key={f} value={f}>
-              {FAMILY_LABEL[f]}
+              {LOCATION_LABEL[f]}
             </option>
           ))}
         </select>
@@ -513,12 +506,7 @@ export default function ParishesAdmin() {
                       {p.name}
                     </Link>
                     <div className="mt-1 flex items-center gap-2">
-                      <FamilyBadge family={p.family} />
-                      {p.address && (
-                        <span className="truncate text-xs text-navy-500" title={p.address}>
-                          {p.address}
-                        </span>
-                      )}
+                      <LocationBadge location={p.location} />
                     </div>
                   </td>
                   <td className="td">
@@ -629,15 +617,15 @@ export default function ParishesAdmin() {
                 maxLength={25}
               />
             </Field>
-            <Field label="Family" required>
+            <Field label="Location" required>
               <select
                 className="input"
-                value={draft.family}
-                onChange={(e) => set('family', e.target.value as Family)}
+                value={draft.location}
+                onChange={(e) => set('location', e.target.value as LocationCode)}
               >
-                {FAMILIES.map((f) => (
+                {LOCATIONS.map((f) => (
                   <option key={f} value={f}>
-                    {FAMILY_LABEL[f]}
+                    {LOCATION_LABEL[f]}
                   </option>
                 ))}
               </select>
@@ -651,7 +639,7 @@ export default function ParishesAdmin() {
                 maxLength={120}
               />
               <datalist id="admin-zones">
-                {zonesFor(draft.family, zonesByFamily[draft.family] ?? []).map((z) => (
+                {zonesFor(draft.location, zonesByLocation[draft.location] ?? []).map((z) => (
                   <option key={z} value={z} />
                 ))}
               </datalist>
@@ -665,21 +653,12 @@ export default function ParishesAdmin() {
                 maxLength={120}
               />
               <datalist id="admin-areas">
-                {areasFor(draft.family, draft.zone, areasByZone[draft.zone] ?? []).map((a) => (
+                {areasFor(draft.location, draft.zone, areasByZone[draft.zone] ?? []).map((a) => (
                   <option key={a} value={a} />
                 ))}
               </datalist>
             </Field>
           </div>
-
-          <Field label="Church address">
-            <textarea
-              className="input min-h-[70px] resize-y"
-              value={draft.address}
-              onChange={(e) => set('address', e.target.value)}
-              maxLength={300}
-            />
-          </Field>
 
           <div className="grid gap-5 sm:grid-cols-4">
             <Field label="Ordination">

@@ -128,22 +128,27 @@ the security rules; that is why step 3 works before you can sign in.
 
 ## Who enters what
 
-| Who              | Enters                                                              | Where                    |
-| ---------------- | ------------------------------------------------------------------- | ------------------------ |
-| Provincial admin | The parish list — names, zones, areas                                | **Load province directory** |
-| Pastor in charge | Their **own** name, phone, address, ordination — once                | `/register`              |
-| Pastor in charge | The Sunday attendance figure — every week                            | `/submit`                |
+| Who              | Enters                                                    | Where                       |
+| ---------------- | --------------------------------------------------------- | --------------------------- |
+| Provincial admin | The parish list — names, zones, areas                      | **Load province directory** |
+| Pastor in charge | Their **own** name and phone number                        | `/register` (once)          |
+| Pastor in charge | Parish, their name, phone, the Sunday, the figure          | `/submit` (every week)      |
 
-No personal data ships in this repository. `src/data/provinceStructure.ts` holds
-church structure only: Province → Family → Zone → Area → Parish.
+No personal data ships in this repository — no pastor names, no phone numbers.
+`src/data/provinceStructure.ts` holds church structure only: Province →
+Location → Zone → Area → Parish.
 
-**Claiming is a one-time write, enforced by the database.** A parish loaded from
-the directory has an empty `pastorName`; the public form may fill it in exactly
-once. After that `firestore.rules` stops matching that branch and only an admin
-can change it — so nobody can quietly overwrite another parish's pastor.
+**Every submission refreshes the contact card.** Name and phone come in with the
+weekly return, so the province's contact list reflects whoever is actually in
+charge rather than decaying to whoever held the parish in 2026. `/register`
+exists only to seed a number before the first Sunday.
+
+Addresses and ordination details are not collected from pastors at all; the
+admin panel can still record ordination status against a parish if the province
+wants it.
 
 A parish the directory does not have yet goes in through **"My parish is not
-listed"** on the same form, and lands in the admin approval queue as `pending`.
+listed"**, and lands in the admin approval queue as `pending`.
 
 ## 4. Logo
 

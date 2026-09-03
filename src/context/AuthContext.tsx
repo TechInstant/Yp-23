@@ -89,6 +89,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setLoading(false)
         return
       }
+      // Signing in leaves `loading` false from the signed-out state, while the
+      // role lookup below is still in flight. Without flipping it back on, that
+      // gap renders as user-present-but-not-admin — so "This account is not a
+      // provincial admin" flashes up before the dashboard appears. Stay loading
+      // until the role is actually known.
+      setLoading(true)
       try {
         // Firestore rules enforce this too; the check here is only so the UI can
         // say "not an admin" instead of showing an empty dashboard.

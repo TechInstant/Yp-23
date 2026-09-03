@@ -73,7 +73,14 @@ service cloud.firestore {
     }
 
     match /admins/{uid} {
-      allow read: if isAdmin();
+      // Anyone signed in may read their OWN record, admins may read the list.
+      //
+      // Without the self clause this is circular: isAdmin() is "your admin
+      // document exists", so someone who does not yet have one is refused
+      // permission to discover that fact. Every sign-in by a non-admin then
+      // threw permission-denied, and because that throw happened before the
+      // invitation lookup, an invitee could never redeem their invitation.
+      allow read: if isAdmin() || (isSignedIn() && uid == request.auth.uid);
 
       /**
        * Self-claim against an invitation.

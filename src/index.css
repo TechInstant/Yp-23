@@ -57,6 +57,37 @@
     @apply px-3 py-1.5 text-xs;
   }
 
+  /*
+   * Modal height, with a vh fallback that Tailwind cannot express as classes.
+   *
+   * A browser without `dvh` support drops that declaration entirely. Written as
+   * two Tailwind classes the survivor depends on stylesheet order, not on the
+   * order in the attribute — so the sheet could end up with no max-height at
+   * all. Since the backdrop deliberately does not scroll, that leaves the card
+   * taller than the screen with the footer, and therefore the Save button,
+   * unreachable. Declared here the cascade does the right thing: `vh` applies
+   * everywhere, `dvh` overrides it wherever it is understood.
+   */
+  .modal-sheet {
+    max-height: 100vh;
+    max-height: 100dvh;
+  }
+
+  /* Clear of the home indicator on phones that have one. */
+  .modal-footer {
+    padding-bottom: calc(0.875rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  @media (min-width: 640px) {
+    .modal-sheet {
+      max-height: calc(100vh - 3rem);
+      max-height: calc(100dvh - 3rem);
+    }
+    .modal-footer {
+      padding-bottom: 1rem;
+    }
+  }
+
   .badge {
     @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold;
   }

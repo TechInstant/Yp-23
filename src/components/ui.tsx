@@ -1,4 +1,4 @@
-import { useEffect, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 
 export function Spinner({ label = 'Loading…' }: { label?: string }) {
   return (
@@ -168,11 +168,12 @@ export function Modal({
         which on a phone reads as a modal you cannot submit. Here the header and
         footer stay pinned and only the body moves.
 
-        `dvh` rather than `vh` because it tracks the visible viewport as mobile
-        browser chrome hides and shows — with `vh` the footer ends up parked
-        underneath the address bar.
+        The height cap lives in `.modal-sheet` (index.css) because it needs a vh
+        fallback underneath the dvh line, which Tailwind classes cannot express
+        — and without any cap the footer would sit below the fold with nothing
+        able to scroll to it.
       */}
-      <div className="card flex max-h-[100dvh] w-full max-w-2xl flex-col rounded-b-none sm:max-h-[calc(100dvh-3rem)] sm:rounded-xl">
+      <div className="card modal-sheet flex w-full max-w-2xl flex-col rounded-b-none sm:rounded-xl">
         <div className="flex shrink-0 items-center justify-between gap-3 border-b border-navy-100 px-4 py-3.5 sm:px-5 sm:py-4">
           <h2 className="min-w-0 flex-1 truncate text-base font-semibold text-navy-900 sm:text-lg">
             {title}
@@ -197,11 +198,86 @@ export function Modal({
         <div className="min-h-0 flex-1 overflow-y-auto px-4 py-5 sm:px-5">{children}</div>
 
         {footer && (
-          <div className="flex shrink-0 flex-col-reverse gap-2 border-t border-navy-100 px-4 py-3.5 sm:flex-row sm:justify-end sm:px-5 sm:py-4 [&>button]:w-full sm:[&>button]:w-auto">
+          <div className="modal-footer flex shrink-0 flex-col-reverse gap-2 border-t border-navy-100 bg-white px-4 pt-3.5 sm:flex-row sm:justify-end sm:px-5 sm:pt-4 [&>button]:w-full sm:[&>button]:w-auto">
             {footer}
           </div>
         )}
       </div>
+    </div>
+  )
+}
+
+/**
+ * Password box with a show/hide toggle.
+ *
+ * Typing a password blind on a phone keyboard is where most failed sign-ins
+ * come from, so the reveal is worth having. The toggle is a real button with a
+ * 40px target and an aria-label, and it is excluded from the tab order so it
+ * never sits between the password field and the submit button.
+ */
+export function PasswordInput({
+  value,
+  onChange,
+  autoComplete,
+  minLength,
+  placeholder = '••••••••',
+  required,
+  id,
+}: {
+  value: string
+  onChange: (value: string) => void
+  autoComplete?: string
+  minLength?: number
+  placeholder?: string
+  required?: boolean
+  id?: string
+}) {
+  const [visible, setVisible] = useState(false)
+
+  return (
+    <div className="relative">
+      <input
+        id={id}
+        className="input pr-12"
+        type={visible ? 'text' : 'password'}
+        autoComplete={autoComplete}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        minLength={minLength}
+        required={required}
+      />
+      <button
+        type="button"
+        tabIndex={-1}
+        onClick={() => setVisible((v) => !v)}
+        aria-label={visible ? 'Hide password' : 'Show password'}
+        aria-pressed={visible}
+        className="absolute inset-y-0 right-0 flex w-12 items-center justify-center rounded-r-lg text-navy-400 hover:text-navy-700 focus:outline-none focus-visible:text-navy-800"
+      >
+        {visible ? (
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
+            <path
+              d="M3 3l18 18M10.6 10.6a2 2 0 002.8 2.8M9.4 5.2A9.5 9.5 0 0112 5c5 0 9 4.5 9 7 0 1-.9 2.5-2.4 3.9M6.5 6.9C4.4 8.4 3 10.4 3 12c0 2.5 4 7 9 7 1.4 0 2.7-.3 3.8-.9"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        ) : (
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
+            <path
+              d="M3 12s3.6-7 9-7 9 7 9 7-3.6 7-9 7-9-7-9-7z"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+            <circle cx="12" cy="12" r="2.6" stroke="currentColor" strokeWidth="1.8" />
+          </svg>
+        )}
+      </button>
     </div>
   )
 }

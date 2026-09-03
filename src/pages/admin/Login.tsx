@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import Logo from '../../components/Logo'
-import { Alert, Field, Spinner } from '../../components/ui'
+import { Alert, Field, PasswordInput, Spinner } from '../../components/ui'
 import { useAuth } from '../../context/AuthContext'
 
 /** Firebase auth error codes, translated into something a human can act on. */
@@ -59,7 +59,10 @@ export default function Login() {
       // first sign-in.
       if (mode === 'signup') await signUp(email, password)
       else await signIn(email, password)
-      navigate('/admin/dashboard', { replace: true })
+      // Deliberately no navigate() here. Firebase resolves this promise before
+      // the role lookup has run, so redirecting now lands on the dashboard
+      // while access is still unknown. The effect above navigates once the role
+      // is settled; until then the spinner holds.
     } catch (err) {
       const code =
         typeof err === 'object' && err && 'code' in err ? String((err as { code: string }).code) : ''
@@ -143,13 +146,10 @@ export default function Login() {
                 required
                 hint={mode === 'signup' ? 'At least 6 characters.' : undefined}
               >
-                <input
-                  className="input"
-                  type="password"
-                  autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
+                <PasswordInput
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
+                  onChange={setPassword}
+                  autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
                   minLength={mode === 'signup' ? 6 : undefined}
                   required
                 />

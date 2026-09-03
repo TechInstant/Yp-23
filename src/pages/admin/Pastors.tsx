@@ -1,19 +1,18 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Alert, EmptyState, LocationBadge, Spinner, StatTile } from '../../components/ui'
+import { Alert, EmptyState, Spinner, StatTile } from '../../components/ui'
 import { useAttendance } from '../../hooks/useAttendance'
 import { useParishContacts } from '../../hooks/useParishContacts'
 import { useParishes } from '../../hooks/useParishes'
 import { downloadCsv, toCsv } from '../../lib/csv'
 import { currentReportingSunday, formatSunday, formatSundayLong, resolveRange } from '../../lib/sundays'
-import { CATEGORY_SHORT, LOCATION_LABEL, type LocationCode } from '../../types'
 
 /**
  * The contact sheet: who to ring, and who needs ringing.
  *
  * Sorted so the parishes that have not reported for the current Sunday come
- * first — the whole point of the page is chasing the missing returns, not
- * admiring a complete list.
+ * first — the point of the page is chasing missing returns, not admiring a
+ * complete list.
  */
 
 /** 07034936069 -> 2347034936069, which is what wa.me expects. */
@@ -34,7 +33,6 @@ export default function Pastors() {
   const { records } = useAttendance(range)
 
   const [search, setSearch] = useState('')
-  const [location, setLocation] = useState<LocationCode | ''>('')
   const [onlyMissing, setOnlyMissing] = useState(false)
 
   const reportedThisSunday = useMemo(
@@ -60,14 +58,10 @@ export default function Pastors() {
         lastSeen: lastSeen.get(p.id) ?? null,
       }))
       .filter((row) => {
-        if (location && row.parish.location !== location) return false
         if (onlyMissing && row.reported) return false
         const needle = search.trim().toLowerCase()
         if (!needle) return true
-        return [row.parish.name, row.pastorName, row.phone, row.parish.zone, row.parish.area]
-          .join(' ')
-          .toLowerCase()
-          .includes(needle)
+        return `${row.parish.name} ${row.pastorName} ${row.phone}`.toLowerCase().includes(needle)
       })
       .sort((a, b) => {
         // Missing returns first, then parishes with no number at all, then A–Z.
@@ -75,7 +69,7 @@ export default function Pastors() {
         if (Boolean(a.phone) !== Boolean(b.phone)) return a.phone ? 1 : -1
         return a.parish.name.localeCompare(b.parish.name)
       })
-  }, [active, phones, contacts, reportedThisSunday, records, location, onlyMissing, search])
+  }, [active, phones, contacts, reportedThisSunday, records, onlyMissing, search])
 
   const withPhone = active.filter((p) => (phones[p.id] ?? '').length > 0).length
   const missing = active.filter((p) => !reportedThisSunday.has(p.id)).length
@@ -88,10 +82,6 @@ export default function Pastors() {
           parish: r.parish.name,
           pastor: r.pastorName,
           phone: r.phone,
-          location: LOCATION_LABEL[r.parish.location],
-          zone: r.parish.zone,
-          area: r.parish.area,
-          category: CATEGORY_SHORT[r.parish.category],
           reportedThisSunday: r.reported ? 'yes' : 'no',
           lastReported: r.lastSeen ?? '',
         })),
@@ -99,10 +89,6 @@ export default function Pastors() {
           { key: 'parish', header: 'Parish' },
           { key: 'pastor', header: 'Pastor' },
           { key: 'phone', header: 'Phone' },
-          { key: 'location', header: 'Location' },
-          { key: 'zone', header: 'Zone' },
-          { key: 'area', header: 'Area' },
-          { key: 'category', header: 'Category' },
           { key: 'reportedThisSunday', header: 'Reported this Sunday' },
           { key: 'lastReported', header: 'Last reported' },
         ],
@@ -117,9 +103,7 @@ export default function Pastors() {
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-navy-900">Pastors &amp; contacts</h1>
-          <p className="mt-1 text-sm text-navy-600">
-            Reach out about {formatSundayLong(sunday)}
-          </p>
+          <p className="mt-1 text-sm text-navy-600">Reach out about {formatSundayLong(sunday)}</p>
         </div>
         <button type="button" className="btn-ghost btn-sm" onClick={exportContacts}>
           Export contacts CSV
@@ -142,8 +126,8 @@ export default function Pastors() {
 
       {withPhone === 0 && (
         <Alert tone="info" title="No phone numbers yet">
-          Numbers arrive as pastors claim their parish or submit a return. You can also seed them
-          with <code>npm run seed</code>, or type them in under{' '}
+          Numbers arrive as pastors claim their parish or submit a return. You can also type them
+          in under{' '}
           <Link to="/admin/parishes" className="font-medium underline">
             Parishes
           </Link>
@@ -159,15 +143,6 @@ export default function Pastors() {
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search parish, pastor or number…"
         />
-        <select
-          className="input sm:max-w-[180px]"
-          value={location}
-          onChange={(e) => setLocation(e.target.value as LocationCode | '')}
-        >
-          <option value="">Both locations</option>
-          <option value="IFE">Ife</option>
-          <option value="EDE">Ede</option>
-        </select>
         <label className="flex items-center gap-2 text-sm font-medium text-navy-700">
           <input
             type="checkbox"
@@ -181,9 +156,7 @@ export default function Pastors() {
 
       {rows.length === 0 ? (
         <EmptyState title="Nobody matches those filters">
-          {onlyMissing
-            ? 'Every parish has reported for this Sunday.'
-            : 'Try clearing the search.'}
+          {onlyMissing ? 'Every parish has reported for this Sunday.' : 'Try clearing the search.'}
         </EmptyState>
       ) : (
         <ul className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
@@ -191,36 +164,25 @@ export default function Pastors() {
             const wa = row.phone ? whatsappNumber(row.phone) : null
             return (
               <li key={row.parish.id} className="card flex flex-col gap-3 p-4">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <Link
-                      to={`/admin/parishes/${row.parish.id}`}
-                      className="block truncate font-semibold text-navy-900 hover:underline"
-                      title={row.parish.name}
-                    >
-                      {row.parish.name}
-                    </Link>
-                    <p className="mt-0.5 truncate text-sm text-navy-600">
-                      {row.pastorName || (
-                        <span className="italic text-navy-400">No pastor on record</span>
-                      )}
-                    </p>
-                  </div>
-                  <LocationBadge location={row.parish.location} />
+                <div className="min-w-0">
+                  <Link
+                    to={`/admin/parishes/${row.parish.id}`}
+                    className="block truncate font-semibold text-navy-900 hover:underline"
+                    title={row.parish.name}
+                  >
+                    {row.parish.name}
+                  </Link>
+                  <p className="mt-0.5 truncate text-sm text-navy-600">
+                    {row.pastorName || (
+                      <span className="italic text-navy-400">No pastor on record</span>
+                    )}
+                  </p>
                 </div>
-
-                <p className="text-xs text-navy-500">
-                  {[row.parish.zone, row.parish.area].filter(Boolean).join(' · ') || '—'}
-                  {' · '}
-                  {CATEGORY_SHORT[row.parish.category]}
-                </p>
 
                 <div className="flex items-center gap-2">
                   <span
                     className={`badge ${
-                      row.reported
-                        ? 'bg-emerald-100 text-emerald-800'
-                        : 'bg-gold-100 text-gold-800'
+                      row.reported ? 'bg-emerald-100 text-emerald-800' : 'bg-gold-100 text-gold-800'
                     }`}
                   >
                     {row.reported ? 'Reported' : 'Not yet'}

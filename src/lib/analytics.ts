@@ -1,13 +1,11 @@
-import type { AttendanceRecord, ChurchCategory, LocationCode, Parish } from '../types'
+import type { AttendanceRecord, Parish } from '../types'
 import { remittancePeriods, type RemittancePeriod } from './remittance'
 import { allSundays, type DateRange } from './sundays'
 
 export interface PointTotals {
   date: string
   total: number
-  IFE: number
-  EDE: number
-  /** How many churches actually returned a figure that Sunday. */
+  /** How many parishes actually returned a figure that Sunday. */
   reporting: number
 }
 
@@ -19,29 +17,25 @@ export function inRange(records: AttendanceRecord[], range: DateRange): Attendan
  * One row per Sunday in the range, including Sundays nobody reported — a gap in
  * the line is itself the signal the province wants to see.
  */
-export function totalsBySunday(
-  records: AttendanceRecord[],
-  range: DateRange,
-): PointTotals[] {
+export function totalsBySunday(records: AttendanceRecord[], range: DateRange): PointTotals[] {
   const buckets = new Map<string, PointTotals>()
   for (const date of allSundays()) {
     if (date >= range.from && date <= range.to) {
-      buckets.set(date, { date, total: 0, IFE: 0, EDE: 0, reporting: 0 })
+      buckets.set(date, { date, total: 0, reporting: 0 })
     }
   }
   for (const r of records) {
     const b = buckets.get(r.date)
     if (!b) continue
     b.total += r.attendance
-    b[r.location] += r.attendance
     b.reporting += 1
   }
   return [...buckets.values()]
 }
 
 export interface PointWithAverage extends PointTotals {
-  /** Mean attendance per reporting church that Sunday. */
-  perChurch: number
+  /** Mean attendance per reporting parish that Sunday. */
+  perParish: number
   /** Trailing mean of `total` over `window` Sundays that had returns. */
   rollingAverage: number | null
 }
@@ -58,10 +52,7 @@ export interface PointWithAverage extends PointTotals {
  * return is missing data, not an empty church, and averaging it in would drag
  * the line down and invent a decline.
  */
-export function withRollingAverage(
-  points: PointTotals[],
-  window = 4,
-): PointWithAverage[] {
+export function withRollingAverage(points: PointTotals[], window = 4): PointWithAverage[] {
   const reported: number[] = []
   return points.map((p) => {
     if (p.reporting > 0) {
@@ -70,7 +61,7 @@ export function withRollingAverage(
     }
     return {
       ...p,
-      perChurch: p.reporting > 0 ? Math.round(p.total / p.reporting) : 0,
+      perParish: p.reporting > 0 ? Math.round(p.total / p.reporting) : 0,
       rollingAverage:
         reported.length > 0
           ? Math.round(reported.reduce((s, v) => s + v, 0) / reported.length)
@@ -86,13 +77,11 @@ export interface RemittanceTotals {
   sundays: number
   partial: boolean
   total: number
-  IFE: number
-  EDE: number
   /** Mean attendance per Sunday across the period — comparable when a period
    *  has five Sundays instead of four. */
   perSunday: number
   returns: number
-  /** Change in total against the preceding complete period. */
+  /** Change in total against the preceding period that had returns. */
   changePct: number | null
 }
 
@@ -119,14 +108,10 @@ export function totalsByRemittance(
 
   const rows: RemittanceTotals[] = periods.map((period) => {
     let total = 0
-    let IFE = 0
-    let EDE = 0
     let returns = 0
     for (const date of period.sundays) {
       for (const r of byDate.get(date) ?? []) {
         total += r.attendance
-        if (r.location === 'IFE') IFE += r.attendance
-        else EDE += r.attendance
         returns += 1
       }
     }
@@ -137,8 +122,6 @@ export function totalsByRemittance(
       sundays: period.sundays.length,
       partial: period.partial,
       total,
-      IFE,
-      EDE,
       perSunday: period.sundays.length ? Math.round(total / period.sundays.length) : 0,
       returns,
       changePct: null,
@@ -160,10 +143,6 @@ export function totalsByRemittance(
 export interface ParishGrowth {
   parishId: string
   parishName: string
-  location: LocationCode
-  zone: string
-  area: string
-  category: ChurchCategory
   first: number
   latest: number
   /** Mean of the earliest window, used as the growth baseline. */
@@ -178,10 +157,10 @@ export interface ParishGrowth {
 }
 
 /**
- * Growth is measured as "recent form vs opening form": the mean of a church's
+ * Growth is measured as "recent form vs opening form": the mean of a parish's
  * last few returns against the mean of its first few, inside the selected
  * range. A single freak Sunday (a convention, a rainstorm) then cannot flip a
- * church from growing to shrinking, which a plain first-vs-last comparison
+ * parish from growing to shrinking, which a plain first-vs-last comparison
  * would happily do.
  */
 export function parishGrowth(
@@ -211,10 +190,6 @@ export function parishGrowth(
     out.push({
       parishId: parish.id,
       parishName: parish.name,
-      location: parish.location,
-      zone: parish.zone,
-      area: parish.area,
-      category: parish.category,
       first: values[0],
       latest: values[values.length - 1],
       baseline,
@@ -227,38 +202,6 @@ export function parishGrowth(
     })
   }
   return out
-}
-
-export interface GroupTotals {
-  name: string
-  total: number
-  average: number
-  parishes: number
-  returns: number
-}
-
-export function groupBy(
-  records: AttendanceRecord[],
-  key: 'zone' | 'area' | 'location' | 'category',
-): GroupTotals[] {
-  const map = new Map<string, { total: number; returns: number; parishes: Set<string> }>()
-  for (const r of records) {
-    const name = r[key] || 'Unassigned'
-    const entry = map.get(name) ?? { total: 0, returns: 0, parishes: new Set<string>() }
-    entry.total += r.attendance
-    entry.returns += 1
-    entry.parishes.add(r.parishId)
-    map.set(name, entry)
-  }
-  return [...map.entries()]
-    .map(([name, v]) => ({
-      name,
-      total: v.total,
-      average: v.returns ? Math.round(v.total / v.returns) : 0,
-      parishes: v.parishes.size,
-      returns: v.returns,
-    }))
-    .sort((a, b) => b.total - a.total)
 }
 
 export interface Headline {
@@ -310,7 +253,7 @@ export function headline(
   }
 }
 
-/** Churches that have not returned a figure for the given Sunday. */
+/** Parishes that have not returned a figure for the given Sunday. */
 export function missingReturns(
   records: AttendanceRecord[],
   parishes: Parish[],

@@ -30,27 +30,5 @@ export function useParishes() {
 
   const active = useMemo(() => parishes.filter((p) => p.status === 'active'), [parishes])
 
-  const zonesByLocation = useMemo(() => {
-    const map: Record<string, string[]> = {}
-    for (const p of parishes) {
-      if (!p.zone) continue
-      const list = (map[p.location] ??= [])
-      if (!list.includes(p.zone)) list.push(p.zone)
-    }
-    Object.values(map).forEach((l) => l.sort())
-    return map
-  }, [parishes])
-
-  const areasByZone = useMemo(() => {
-    const map: Record<string, string[]> = {}
-    for (const p of parishes) {
-      if (!p.zone || !p.area) continue
-      const list = (map[p.zone] ??= [])
-      if (!list.includes(p.area)) list.push(p.area)
-    }
-    Object.values(map).forEach((l) => l.sort())
-    return map
-  }, [parishes])
-
-  return { parishes, active, zonesByLocation, areasByZone, loading, error }
+  return { parishes, active, loading, error }
 }

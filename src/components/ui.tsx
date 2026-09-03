@@ -166,18 +166,6 @@ export function Modal({
   )
 }
 
-export function LocationBadge({ location }: { location: string }) {
-  return (
-    <span
-      className={`badge ${
-        location === 'IFE' ? 'bg-navy-100 text-navy-800' : 'bg-gold-100 text-gold-800'
-      }`}
-    >
-      {location}
-    </span>
-  )
-}
-
 export function StatusBadge({ status }: { status: string }) {
   const styles: Record<string, string> = {
     active: 'bg-emerald-100 text-emerald-800',

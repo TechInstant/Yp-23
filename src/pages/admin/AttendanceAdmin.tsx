@@ -1,13 +1,6 @@
 import { useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import {
-  deleteDoc,
-  doc,
-  serverTimestamp,
-  setDoc,
-  updateDoc,
-  writeBatch,
-} from 'firebase/firestore'
+import { deleteDoc, doc, serverTimestamp, setDoc, updateDoc, writeBatch } from 'firebase/firestore'
 import SundayPicker from '../../components/SundayPicker'
 import { Alert, EmptyState, Field, Modal, Spinner } from '../../components/ui'
 import { useAttendance } from '../../hooks/useAttendance'
@@ -23,7 +16,7 @@ import {
   resolveRange,
   type RangePresetKey,
 } from '../../lib/sundays'
-import { LOCATIONS, LOCATION_LABEL, type AttendanceRecord, type LocationCode } from '../../types'
+import type { AttendanceRecord, Parish } from '../../types'
 
 export default function AttendanceAdmin() {
   const [preset, setPreset] = useState<RangePresetKey>('last8')
@@ -33,7 +26,6 @@ export default function AttendanceAdmin() {
   const { records, loading, error } = useAttendance(range)
 
   const [search, setSearch] = useState('')
-  const [location, setLocation] = useState<LocationCode | ''>('')
   const [editing, setEditing] = useState<AttendanceRecord | null>(null)
   const [adding, setAdding] = useState(false)
   const [message, setMessage] = useState<{ tone: 'success' | 'error'; text: string } | null>(null)
@@ -43,12 +35,11 @@ export default function AttendanceAdmin() {
     const needle = search.trim().toLowerCase()
     return [...records]
       .filter((r) => {
-        if (location && r.location !== location) return false
         if (!needle) return true
-        return [r.parishName, r.zone, r.area, r.note].join(' ').toLowerCase().includes(needle)
+        return `${r.parishName} ${r.pastorName} ${r.note}`.toLowerCase().includes(needle)
       })
       .sort((a, b) => b.date.localeCompare(a.date) || a.parishName.localeCompare(b.parishName))
-  }, [records, search, location])
+  }, [records, search])
 
   const total = filtered.reduce((s, r) => s + r.attendance, 0)
 
@@ -82,11 +73,10 @@ export default function AttendanceAdmin() {
   }
 
   /**
-   * Bulk backfill from seed/attendance-template.csv:
-   * `parishName,date,attendance,note`. Parishes are matched by name so the
-   * sheet can be typed by hand from the paper returns; anything that does not
-   * match a live parish or a tracked Sunday is reported back rather than
-   * silently dropped.
+   * Bulk backfill from a `parishName,date,attendance,note` sheet. Parishes are
+   * matched by name so the sheet can be typed from the paper returns; anything
+   * that does not match a live parish or a tracked Sunday is reported back
+   * rather than silently dropped.
    */
   async function handleImport(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0]
@@ -96,8 +86,7 @@ export default function AttendanceAdmin() {
     try {
       const rows = parseCsv(await file.text())
       const byName = new Map(active.map((p) => [p.name.trim().toUpperCase(), p]))
-      const valid: { parish: (typeof active)[number]; date: string; count: number; note: string }[] =
-        []
+      const valid: { parish: Parish; date: string; count: number; note: string }[] = []
       const rejected: string[] = []
 
       for (const row of rows) {
@@ -121,9 +110,7 @@ export default function AttendanceAdmin() {
             {
               parishId: v.parish.id,
               parishName: v.parish.name,
-              location: v.parish.location,
-              zone: v.parish.zone,
-              area: v.parish.area,
+              pastorName: v.parish.pastorName || 'Recorded by admin',
               date: v.date,
               attendance: v.count,
               note: v.note,
@@ -163,9 +150,7 @@ export default function AttendanceAdmin() {
       toCsv(filtered, [
         { key: 'date', header: 'Sunday' },
         { key: 'parishName', header: 'Parish' },
-        { key: 'location', header: 'Location' },
-        { key: 'zone', header: 'Zone' },
-        { key: 'area', header: 'Area' },
+        { key: 'pastorName', header: 'Filed by' },
         { key: 'attendance', header: 'Attendance' },
         { key: 'note', header: 'Note' },
         { key: 'source', header: 'Source' },
@@ -225,27 +210,13 @@ export default function AttendanceAdmin() {
       {message && <Alert tone={message.tone}>{message.text}</Alert>}
       {error && <Alert tone="error">{error}</Alert>}
 
-      <div className="flex flex-col gap-3 sm:flex-row">
-        <input
-          className="input sm:max-w-sm"
-          type="search"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search parish, zone or note…"
-        />
-        <select
-          className="input sm:max-w-[180px]"
-          value={location}
-          onChange={(e) => setLocation(e.target.value as LocationCode | '')}
-        >
-          <option value="">Both locations</option>
-          {LOCATIONS.map((f) => (
-            <option key={f} value={f}>
-              {LOCATION_LABEL[f]}
-            </option>
-          ))}
-        </select>
-      </div>
+      <input
+        className="input sm:max-w-sm"
+        type="search"
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        placeholder="Search parish, pastor or note…"
+      />
 
       {loading ? (
         <Spinner label="Loading returns…" />
@@ -255,12 +226,12 @@ export default function AttendanceAdmin() {
         </EmptyState>
       ) : (
         <div className="card overflow-x-auto">
-          <table className="w-full min-w-[820px]">
+          <table className="w-full min-w-[760px]">
             <thead className="border-b border-navy-100 bg-navy-50">
               <tr>
                 <th className="th">Sunday</th>
                 <th className="th">Parish</th>
-                <th className="th">Zone / Area</th>
+                <th className="th">Filed by</th>
                 <th className="th text-right">Attendance</th>
                 <th className="th">Note</th>
                 <th className="th text-right">Actions</th>
@@ -277,12 +248,8 @@ export default function AttendanceAdmin() {
                     >
                       {r.parishName}
                     </Link>
-                    <div className="text-xs text-navy-500">{LOCATION_LABEL[r.location]}</div>
                   </td>
-                  <td className="td text-navy-600">
-                    <div>{r.zone || '—'}</div>
-                    <div className="text-xs text-navy-500">{r.area || '—'}</div>
-                  </td>
+                  <td className="td text-navy-600">{r.pastorName || '—'}</td>
                   <td className="td text-right font-semibold tabular-nums">
                     {r.attendance.toLocaleString()}
                   </td>
@@ -410,7 +377,7 @@ function AddModal({
   onError,
 }: {
   open: boolean
-  parishes: { id: string; name: string; location: LocationCode; zone: string; area: string }[]
+  parishes: Parish[]
   onClose: () => void
   onSaved: (text: string) => void
   onError: (text: string) => void
@@ -420,6 +387,11 @@ function AddModal({
   const [value, setValue] = useState('')
   const [note, setNote] = useState('')
   const [busy, setBusy] = useState(false)
+
+  const options = useMemo(
+    () => [...parishes].sort((a, b) => a.name.localeCompare(b.name)),
+    [parishes],
+  )
 
   async function save() {
     const parish = parishes.find((p) => p.id === parishId)
@@ -446,9 +418,7 @@ function AddModal({
         {
           parishId: parish.id,
           parishName: parish.name,
-          location: parish.location,
-          zone: parish.zone,
-          area: parish.area,
+          pastorName: parish.pastorName || 'Recorded by admin',
           date,
           attendance: count,
           note: note.trim(),
@@ -493,9 +463,9 @@ function AddModal({
         <Field label="Parish" required>
           <select className="input" value={parishId} onChange={(e) => setParishId(e.target.value)}>
             <option value="">Select parish…</option>
-            {parishes.map((p) => (
+            {options.map((p) => (
               <option key={p.id} value={p.id}>
-                {p.name} ({p.location})
+                {p.name}
               </option>
             ))}
           </select>

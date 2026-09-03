@@ -1,55 +1,18 @@
-/**
- * "Location" is the top-level split of the province — Ife and Ede. The two
- * source directories call these "families"; the province uses "location" on
- * the forms, so that is the word the interface uses everywhere. The stored
- * codes stay IFE / EDE.
- */
-export type LocationCode = 'IFE' | 'EDE'
-
-export const LOCATIONS: LocationCode[] = ['IFE', 'EDE']
-
-export const LOCATION_LABEL: Record<LocationCode, string> = {
-  IFE: 'Ife',
-  EDE: 'Ede',
-}
-
-/**
- * What a church is within the province structure. One church can hold all
- * three roles at once — the zone headquarters is also an area headquarters and
- * a parish — so this records the *highest* role it holds, and a zonal pastor
- * submitting for his own church picks ZONE.
- */
-export type ChurchCategory = 'ZONE' | 'AREA' | 'PARISH'
-
-export const CATEGORIES: ChurchCategory[] = ['ZONE', 'AREA', 'PARISH']
-
-export const CATEGORY_LABEL: Record<ChurchCategory, string> = {
-  ZONE: 'Zonal church',
-  AREA: 'Area church',
-  PARISH: 'Parish',
-}
-
-export const CATEGORY_SHORT: Record<ChurchCategory, string> = {
-  ZONE: 'Zone',
-  AREA: 'Area',
-  PARISH: 'Parish',
-}
-
 export type ParishStatus = 'active' | 'pending' | 'archived'
 
-/** Publicly readable. Deliberately holds no phone number — see ParishContact. */
+/**
+ * A parish. Deliberately flat: just the name and who is in charge.
+ *
+ * There is no location / zone / area classification. The province asked for a
+ * plain list of parishes, and the returns are read per parish and province-wide
+ * — no grouping in between. Nothing here is personal except pastorName, which
+ * the pastor supplies themselves; the phone number lives in ParishContact,
+ * which only admins can read.
+ */
 export interface Parish {
   id: string
   name: string
   pastorName: string
-  location: LocationCode
-  zone: string
-  area: string
-  category: ChurchCategory
-  ordinationStatus: string
-  /** null when the directory says "UNKNOWN". */
-  yearOfOrdination: number | null
-  lengthOfService: string
   status: ParishStatus
   source: 'directory-import' | 'self-registration' | 'admin'
   createdAt?: unknown
@@ -71,7 +34,7 @@ export interface ParishContact {
 }
 
 export interface AttendanceRecord {
-  /** `${parishId}_${date}` — one return per church per Sunday. */
+  /** `${parishId}_${date}` — one return per parish per Sunday. */
   id: string
   parishId: string
   /** Denormalised so the admin tables and CSV export need no join. */
@@ -85,10 +48,6 @@ export interface AttendanceRecord {
    * readable. It goes to parishContacts, which only admins can read.
    */
   pastorName: string
-  location: LocationCode
-  zone: string
-  area: string
-  category: ChurchCategory
   /** YYYY-MM-DD, always a Sunday inside the tracking window. */
   date: string
   attendance: number
@@ -97,13 +56,3 @@ export interface AttendanceRecord {
   createdAt?: unknown
   updatedAt?: unknown
 }
-
-export const ORDINATION_STATUSES = [
-  'PASTOR',
-  'ASSISTANT PASTOR',
-  'DEACON',
-  'DEACONESS',
-  'BROTHER',
-  'SISTER',
-  'UNKNOWN',
-] as const

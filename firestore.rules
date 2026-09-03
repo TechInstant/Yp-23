@@ -6,17 +6,22 @@ rules_version = '2';
 // the public (pastors submit from their phones, no account). So the rules — not
 // the UI — are what stop bad data and protect pastors' phone numbers.
 //
-//   parishes/{id}        public read  (needed by the dropdowns), public create
-//                        (self-registration, forced to status "pending"),
-//                        admin-only update/delete.  NO phone number here.
-//   parishContacts/{id}  phone number. Public create only (write-once, alongside
-//                        the parish). Admin-only read.
-//   attendance/{id}      public create, admin-only update/delete. The doc id is
-//                        "{parishId}_{YYYY-MM-DD}", so a second submission for
-//                        the same Sunday collides with the first instead of
-//                        silently duplicating the parish in the charts.
+//   parishes/{id}        public read (needed by the dropdowns), public create
+//                        (self-registration, forced to status "pending"), public
+//                        update of pastorName only, admin-only delete.
+//                        NO phone number here.
+//   parishContacts/{id}  phone number + the filing pastor's name. Public write
+//                        in a narrow shape, refreshed by every return.
+//                        Admin-only read.
+//   attendance/{id}      public read, public create, admin-only update/delete.
+//                        The doc id is "{parishId}_{YYYY-MM-DD}", so a second
+//                        submission for the same Sunday collides with the first
+//                        instead of silently duplicating the parish in the
+//                        charts.
 //   admins/{uid}         the allow-list. Written from the Firebase console or
 //                        scripts/make-admin.mjs only — never from a client.
+//                        Creating the first admin in the console works because
+//                        console writes are authorised by IAM and bypass rules.
 
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -57,9 +62,8 @@ service cloud.firestore {
       allow create: if isAdmin() ||
                     (
                       incoming().keys().hasOnly([
-                        'name', 'pastorName', 'location', 'zone', 'area', 'category',
-                        'ordinationStatus', 'yearOfOrdination', 'lengthOfService',
-                        'status', 'source', 'createdAt', 'updatedAt'
+                        'name', 'pastorName', 'status', 'source',
+                        'createdAt', 'updatedAt'
                       ])
                       && incoming().name is string
                       && incoming().name.size() >= 2
@@ -67,22 +71,17 @@ service cloud.firestore {
                       && incoming().pastorName is string
                       && incoming().pastorName.size() >= 2
                       && incoming().pastorName.size() <= 120
-                      && incoming().location in ['IFE', 'EDE']
-                      && incoming().zone is string
-                      && incoming().zone.size() <= 120
-                      && incoming().area is string
-                      && incoming().area.size() <= 120
                       && incoming().status == 'pending'
                       && incoming().source == 'self-registration'
                       && incoming().createdAt == request.time
                     );
 
       // Claiming a parish: the pastor in charge writes their own name against a
-      // parish already in the directory. Only the name — the location, zone and
-      // area come from the directory, and the phone number goes to
-      // parishContacts. Re-claiming is allowed so a parish that changes hands
-      // is not stuck with the previous pastor's name until an admin intervenes;
-      // the province sees every change through the contact card's updatedAt.
+      // parish already in the directory. Only the name — the phone number goes
+      // to parishContacts. Re-claiming is allowed so a parish that changes
+      // hands is not stuck with the previous pastor's name until an admin
+      // intervenes; the province sees every change through the contact card's
+      // updatedAt.
       allow update: if isAdmin() ||
                     (
                       incoming().diff(resource.data).affectedKeys().hasOnly([
@@ -140,13 +139,11 @@ service cloud.firestore {
                     (
                       recordId == incoming().parishId + '_' + incoming().date
                       && incoming().keys().hasOnly([
-                           'parishId', 'parishName', 'pastorName', 'location',
-                           'zone', 'area', 'category', 'date', 'attendance',
-                           'note', 'source', 'createdAt', 'updatedAt'
+                           'parishId', 'parishName', 'pastorName', 'date',
+                           'attendance', 'note', 'source', 'createdAt', 'updatedAt'
                          ])
                       && exists(/databases/$(database)/documents/parishes/$(incoming().parishId))
                       && isTrackedSunday(incoming().date)
-                      && incoming().location in ['IFE', 'EDE']
                       && incoming().pastorName is string
                       && incoming().pastorName.size() >= 2
                       && incoming().pastorName.size() <= 120

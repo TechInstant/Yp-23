@@ -10,81 +10,28 @@ import {
   updateDoc,
   writeBatch,
 } from 'firebase/firestore'
-import {
-  Alert,
-  EmptyState,
-  LocationBadge,
-  Field,
-  Modal,
-  Spinner,
-  StatusBadge,
-} from '../../components/ui'
-import {
-  areasFor,
-  DIRECTORY_COUNT,
-  flattenDirectory,
-  zonesFor,
-} from '../../data/provinceStructure'
+import { Alert, EmptyState, Field, Modal, Spinner, StatusBadge } from '../../components/ui'
+import { DIRECTORY_COUNT, flattenDirectory } from '../../data/provinceStructure'
 import { useParishContacts } from '../../hooks/useParishContacts'
 import { useParishes } from '../../hooks/useParishes'
 import { downloadCsv, parseCsv, toCsv } from '../../lib/csv'
 import { COLLECTIONS, db } from '../../lib/firebase'
-import {
-  LOCATIONS,
-  LOCATION_LABEL,
-  ORDINATION_STATUSES,
-  type LocationCode,
-  type Parish,
-  type ParishStatus,
-} from '../../types'
+import type { Parish, ParishStatus } from '../../types'
 
 interface Draft {
   name: string
   pastorName: string
   phone: string
-  location: LocationCode
-  zone: string
-  area: string
-  ordinationStatus: string
-  yearOfOrdination: string
-  lengthOfService: string
   status: ParishStatus
 }
 
-const BLANK: Draft = {
-  name: '',
-  pastorName: '',
-  phone: '',
-  location: 'IFE',
-  zone: '',
-  area: '',
-  ordinationStatus: 'UNKNOWN',
-  yearOfOrdination: '',
-  lengthOfService: '',
-  status: 'active',
-}
-
-function toDraft(parish: Parish, phone: string): Draft {
-  return {
-    name: parish.name,
-    pastorName: parish.pastorName,
-    phone,
-    location: parish.location,
-    zone: parish.zone ?? '',
-    area: parish.area ?? '',
-    ordinationStatus: parish.ordinationStatus || 'UNKNOWN',
-    yearOfOrdination: parish.yearOfOrdination ? String(parish.yearOfOrdination) : '',
-    lengthOfService: parish.lengthOfService ?? '',
-    status: parish.status,
-  }
-}
+const BLANK: Draft = { name: '', pastorName: '', phone: '', status: 'active' }
 
 export default function ParishesAdmin() {
-  const { parishes, zonesByLocation, areasByZone, loading } = useParishes()
-  const { phones, refresh: refreshPhones } = useParishContacts()
+  const { parishes, loading } = useParishes()
+  const { phones, contacts, refresh: refreshContacts } = useParishContacts()
 
   const [search, setSearch] = useState('')
-  const [location, setLocation] = useState<LocationCode | ''>('')
   const [status, setStatus] = useState<ParishStatus | ''>('')
 
   const [editing, setEditing] = useState<Parish | null>(null)
@@ -92,24 +39,20 @@ export default function ParishesAdmin() {
   const [draft, setDraft] = useState<Draft>(BLANK)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<{ tone: 'success' | 'error'; text: string } | null>(null)
-
-  const [importReport, setImportReport] = useState<string | null>(null)
   const fileInput = useRef<HTMLInputElement>(null)
 
   const pendingCount = parishes.filter((p) => p.status === 'pending').length
 
   const filtered = useMemo(() => {
     const needle = search.trim().toLowerCase()
-    return parishes.filter((p) => {
-      if (location && p.location !== location) return false
-      if (status && p.status !== status) return false
-      if (!needle) return true
-      return [p.name, p.pastorName, p.zone, p.area, phones[p.id] ?? '']
-        .join(' ')
-        .toLowerCase()
-        .includes(needle)
-    })
-  }, [parishes, search, location, status, phones])
+    return parishes
+      .filter((p) => {
+        if (status && p.status !== status) return false
+        if (!needle) return true
+        return `${p.name} ${p.pastorName} ${phones[p.id] ?? ''}`.toLowerCase().includes(needle)
+      })
+      .sort((a, b) => a.name.localeCompare(b.name))
+  }, [parishes, search, status, phones])
 
   function openCreate() {
     setDraft(BLANK)
@@ -119,7 +62,12 @@ export default function ParishesAdmin() {
   }
 
   function openEdit(parish: Parish) {
-    setDraft(toDraft(parish, phones[parish.id] ?? ''))
+    setDraft({
+      name: parish.name,
+      pastorName: contacts[parish.id]?.pastorName || parish.pastorName || '',
+      phone: phones[parish.id] ?? '',
+      status: parish.status,
+    })
     setEditing(parish)
     setCreating(false)
     setMessage(null)
@@ -130,14 +78,10 @@ export default function ParishesAdmin() {
     setEditing(null)
   }
 
-  function set<K extends keyof Draft>(key: K, value: Draft[K]) {
-    setDraft((prev) => ({ ...prev, [key]: value }))
-  }
-
   async function handleSave(event: React.FormEvent) {
     event.preventDefault()
-    if (draft.name.trim().length < 2 || draft.pastorName.trim().length < 2) {
-      setMessage({ tone: 'error', text: 'Parish name and pastor name are both required.' })
+    if (draft.name.trim().length < 2) {
+      setMessage({ tone: 'error', text: 'The parish name is required.' })
       return
     }
 
@@ -146,12 +90,6 @@ export default function ParishesAdmin() {
       const payload = {
         name: draft.name.trim(),
         pastorName: draft.pastorName.trim(),
-        location: draft.location,
-        zone: draft.zone.trim(),
-        area: draft.area.trim(),
-        ordinationStatus: draft.ordinationStatus,
-        yearOfOrdination: draft.yearOfOrdination ? Number(draft.yearOfOrdination) : null,
-        lengthOfService: draft.lengthOfService.trim(),
         status: draft.status,
         updatedAt: serverTimestamp(),
       }
@@ -177,6 +115,7 @@ export default function ParishesAdmin() {
           doc(db, COLLECTIONS.parishContacts, parishId),
           {
             phone,
+            pastorName: draft.pastorName.trim(),
             updatedAt: serverTimestamp(),
             ...(editing ? {} : { createdAt: serverTimestamp() }),
           },
@@ -184,12 +123,64 @@ export default function ParishesAdmin() {
         )
       }
 
-      await refreshPhones()
+      await refreshContacts()
       setMessage({
         tone: 'success',
         text: `${payload.name} ${editing ? 'updated' : 'added'}.`,
       })
       closeModal()
+    } catch (err) {
+      setMessage({ tone: 'error', text: err instanceof Error ? err.message : String(err) })
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  /**
+   * Writes the province's parish list from src/data/provinceStructure.ts using
+   * the signed-in admin session — no service-account key needed, which matters
+   * because org policy can block key creation entirely.
+   */
+  async function loadDirectory() {
+    const known = new Set(parishes.map((p) => p.name.trim().toUpperCase()))
+    const missing = flattenDirectory().filter((p) => !known.has(p.name.toUpperCase()))
+
+    if (missing.length === 0) {
+      setMessage({
+        tone: 'success',
+        text: `All ${DIRECTORY_COUNT} parishes in the province directory are already here.`,
+      })
+      return
+    }
+
+    if (
+      !window.confirm(
+        `Add ${missing.length} parish${missing.length === 1 ? '' : 'es'} from the province directory?\n\n` +
+          'Names only — no pastor and no phone number. Each pastor fills those in themselves.',
+      )
+    )
+      return
+
+    setSaving(true)
+    try {
+      for (let i = 0; i < missing.length; i += 400) {
+        const batch = writeBatch(db)
+        for (const p of missing.slice(i, i + 400)) {
+          batch.set(doc(collection(db, COLLECTIONS.parishes)), {
+            name: p.name,
+            pastorName: '',
+            status: p.status,
+            source: 'directory-import',
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+          })
+        }
+        await batch.commit()
+      }
+      setMessage({
+        tone: 'success',
+        text: `Added ${missing.length} parish${missing.length === 1 ? '' : 'es'}. Pastors can now claim them.`,
+      })
     } catch (err) {
       setMessage({ tone: 'error', text: err instanceof Error ? err.message : String(err) })
     } finally {
@@ -213,110 +204,38 @@ export default function ParishesAdmin() {
   }
 
   async function remove(parish: Parish) {
-    // Deleting the parish leaves its attendance history orphaned, so say so
-    // plainly before doing it. Archiving is almost always the right answer.
-    const ok = window.confirm(
-      `Delete ${parish.name} permanently?\n\nIts attendance records stay in the database but will no longer be linked to a parish. Archive it instead if you only want it off the submission form.`,
+    // Deleting leaves the attendance history orphaned, so say so plainly.
+    // Archiving is almost always the right answer.
+    if (
+      !window.confirm(
+        `Delete ${parish.name} permanently?\n\nIts attendance records stay in the database but will no longer be linked to a parish. Archive it instead if you only want it off the submission form.`,
+      )
     )
-    if (!ok) return
+      return
     await deleteDoc(doc(db, COLLECTIONS.parishes, parish.id))
     try {
       await deleteDoc(doc(db, COLLECTIONS.parishContacts, parish.id))
     } catch {
       /* contact may not exist */
     }
-    await refreshPhones()
+    await refreshContacts()
     setMessage({ tone: 'success', text: `${parish.name} deleted.` })
-  }
-
-  /**
-   * Creates every parish in the published province directory that is not
-   * already present, matched by name. Pastor and phone are left blank on
-   * purpose — the pastor in charge fills those in from the public form, which
-   * is the only place their personal details are ever entered.
-   */
-  async function loadDirectory() {
-    const known = new Set(parishes.map((p) => p.name.trim().toUpperCase()))
-    const missing = flattenDirectory().filter((p) => !known.has(p.name.toUpperCase()))
-
-    if (missing.length === 0) {
-      setMessage({
-        tone: 'success',
-        text: `All ${DIRECTORY_COUNT} parishes in the province directory are already here.`,
-      })
-      return
-    }
-
-    if (
-      !window.confirm(
-        `Add ${missing.length} parish${missing.length === 1 ? '' : 'es'} from the province directory?\n\n` +
-          'They are created with their zone and area but no pastor and no phone number — ' +
-          'each pastor fills those in themselves from the "Claim your parish" form.',
-      )
-    )
-      return
-
-    setSaving(true)
-    try {
-      for (let i = 0; i < missing.length; i += 400) {
-        const batch = writeBatch(db)
-        for (const p of missing.slice(i, i + 400)) {
-          batch.set(doc(collection(db, COLLECTIONS.parishes)), {
-            name: p.name,
-            pastorName: '',
-            location: p.location,
-            zone: p.zone,
-            area: p.area,
-            category: p.category,
-            ordinationStatus: 'UNKNOWN',
-            yearOfOrdination: null,
-            lengthOfService: '',
-            // Unassigned parishes stay pending until the province places them.
-            status: p.zone ? 'active' : 'pending',
-            source: 'directory-import',
-            createdAt: serverTimestamp(),
-            updatedAt: serverTimestamp(),
-          })
-        }
-        await batch.commit()
-      }
-      setMessage({
-        tone: 'success',
-        text: `Added ${missing.length} parish${missing.length === 1 ? '' : 'es'} from the province directory. Pastors can now claim them.`,
-      })
-    } catch (err) {
-      setMessage({ tone: 'error', text: err instanceof Error ? err.message : String(err) })
-    } finally {
-      setSaving(false)
-    }
   }
 
   function exportCsv() {
     downloadCsv(
-      `yp23-parish-directory-${new Date().toISOString().slice(0, 10)}.csv`,
+      `yp23-parishes-${new Date().toISOString().slice(0, 10)}.csv`,
       toCsv(
-        parishes.map((p) => ({
+        filtered.map((p) => ({
           name: p.name,
-          pastorName: p.pastorName,
+          pastorName: contacts[p.id]?.pastorName || p.pastorName || '',
           phone: phones[p.id] ?? '',
-          location: p.location,
-          zone: p.zone ?? '',
-          area: p.area ?? '',
-          ordinationStatus: p.ordinationStatus ?? '',
-          yearOfOrdination: p.yearOfOrdination ?? '',
-          lengthOfService: p.lengthOfService ?? '',
           status: p.status,
         })),
         [
           { key: 'name', header: 'name' },
           { key: 'pastorName', header: 'pastorName' },
           { key: 'phone', header: 'phone' },
-          { key: 'location', header: 'location' },
-          { key: 'zone', header: 'zone' },
-          { key: 'area', header: 'area' },
-          { key: 'ordinationStatus', header: 'ordinationStatus' },
-          { key: 'yearOfOrdination', header: 'yearOfOrdination' },
-          { key: 'lengthOfService', header: 'lengthOfService' },
           { key: 'status', header: 'status' },
         ],
       ),
@@ -326,36 +245,29 @@ export default function ParishesAdmin() {
   async function handleImport(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0]
     if (!file) return
-    setImportReport(null)
+    setMessage(null)
 
     try {
       const rows = parseCsv(await file.text())
       const known = new Set(parishes.map((p) => p.name.trim().toUpperCase()))
-      const toAdd = rows.filter(
-        (r) => r.name?.trim() && !known.has(r.name.trim().toUpperCase()),
-      )
+      const toAdd = rows.filter((r) => r.name?.trim() && !known.has(r.name.trim().toUpperCase()))
       const skipped = rows.length - toAdd.length
 
       if (toAdd.length === 0) {
-        setImportReport(`Nothing to import — all ${rows.length} rows already exist by name.`)
+        setMessage({
+          tone: 'error',
+          text: `Nothing to import — all ${rows.length} rows already exist by name.`,
+        })
         return
       }
 
-      // Two writes per parish (record + contact) and a 500-op batch limit, so
-      // chunk at 200 parishes.
       for (let i = 0; i < toAdd.length; i += 200) {
         const batch = writeBatch(db)
         for (const row of toAdd.slice(i, i + 200)) {
           const ref = doc(collection(db, COLLECTIONS.parishes))
           batch.set(ref, {
             name: row.name.trim(),
-            pastorName: (row.pastorName ?? '').trim() || 'TO BE ASSIGNED',
-            location: row.location?.trim().toUpperCase() === 'EDE' ? 'EDE' : 'IFE',
-            zone: (row.zone ?? '').trim(),
-            area: (row.area ?? '').trim(),
-            ordinationStatus: (row.ordinationStatus ?? '').trim() || 'UNKNOWN',
-            yearOfOrdination: row.yearOfOrdination ? Number(row.yearOfOrdination) : null,
-            lengthOfService: (row.lengthOfService ?? '').trim(),
+            pastorName: (row.pastorName ?? '').trim(),
             status: row.status?.trim() === 'pending' ? 'pending' : 'active',
             source: 'admin',
             createdAt: serverTimestamp(),
@@ -364,6 +276,7 @@ export default function ParishesAdmin() {
           if (row.phone?.trim()) {
             batch.set(doc(db, COLLECTIONS.parishContacts, ref.id), {
               phone: row.phone.replace(/[^\d+]/g, ''),
+              pastorName: (row.pastorName ?? '').trim(),
               createdAt: serverTimestamp(),
               updatedAt: serverTimestamp(),
             })
@@ -372,13 +285,18 @@ export default function ParishesAdmin() {
         await batch.commit()
       }
 
-      await refreshPhones()
-      setImportReport(
-        `Imported ${toAdd.length} parish${toAdd.length === 1 ? '' : 'es'}.` +
+      await refreshContacts()
+      setMessage({
+        tone: 'success',
+        text:
+          `Imported ${toAdd.length} parish${toAdd.length === 1 ? '' : 'es'}.` +
           (skipped ? ` Skipped ${skipped} already in the directory.` : ''),
-      )
+      })
     } catch (err) {
-      setImportReport(`Import failed: ${err instanceof Error ? err.message : String(err)}`)
+      setMessage({
+        tone: 'error',
+        text: `Import failed: ${err instanceof Error ? err.message : String(err)}`,
+      })
     } finally {
       if (fileInput.current) fileInput.current.value = ''
     }
@@ -441,10 +359,7 @@ export default function ParishesAdmin() {
         </div>
       </header>
 
-      {message && (
-        <Alert tone={message.tone}>{message.text}</Alert>
-      )}
-      {importReport && <Alert tone="info">{importReport}</Alert>}
+      {message && <Alert tone={message.tone}>{message.text}</Alert>}
 
       <div className="flex flex-col gap-3 sm:flex-row">
         <input
@@ -452,22 +367,10 @@ export default function ParishesAdmin() {
           type="search"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search parish, pastor, phone, zone…"
+          placeholder="Search parish, pastor or phone…"
         />
         <select
-          className="input sm:max-w-[180px]"
-          value={location}
-          onChange={(e) => setLocation(e.target.value as LocationCode | '')}
-        >
-          <option value="">Both locations</option>
-          {LOCATIONS.map((f) => (
-            <option key={f} value={f}>
-              {LOCATION_LABEL[f]}
-            </option>
-          ))}
-        </select>
-        <select
-          className="input sm:max-w-[180px]"
+          className="input sm:max-w-[200px]"
           value={status}
           onChange={(e) => setStatus(e.target.value as ParishStatus | '')}
         >
@@ -484,13 +387,12 @@ export default function ParishesAdmin() {
         </EmptyState>
       ) : (
         <div className="card overflow-x-auto">
-          <table className="w-full min-w-[900px]">
+          <table className="w-full min-w-[700px]">
             <thead className="border-b border-navy-100 bg-navy-50">
               <tr>
                 <th className="th">Parish</th>
                 <th className="th">Pastor</th>
                 <th className="th">Phone</th>
-                <th className="th">Zone / Area</th>
                 <th className="th">Status</th>
                 <th className="th text-right">Actions</th>
               </tr>
@@ -505,16 +407,11 @@ export default function ParishesAdmin() {
                     >
                       {p.name}
                     </Link>
-                    <div className="mt-1 flex items-center gap-2">
-                      <LocationBadge location={p.location} />
-                    </div>
                   </td>
                   <td className="td">
-                    {p.pastorName}
-                    <div className="text-xs text-navy-500">
-                      {p.ordinationStatus}
-                      {p.yearOfOrdination ? ` · ${p.yearOfOrdination}` : ''}
-                    </div>
+                    {contacts[p.id]?.pastorName || p.pastorName || (
+                      <span className="italic text-navy-300">Not claimed</span>
+                    )}
                   </td>
                   <td className="td whitespace-nowrap">
                     {phones[p.id] ? (
@@ -524,10 +421,6 @@ export default function ParishesAdmin() {
                     ) : (
                       <span className="text-navy-300">—</span>
                     )}
-                  </td>
-                  <td className="td text-navy-600">
-                    <div>{p.zone || '—'}</div>
-                    <div className="text-xs text-navy-500">{p.area || '—'}</div>
                   </td>
                   <td className="td">
                     <StatusBadge status={p.status} />
@@ -543,11 +436,7 @@ export default function ParishesAdmin() {
                           Approve
                         </button>
                       )}
-                      <button
-                        type="button"
-                        className="btn-ghost btn-sm"
-                        onClick={() => openEdit(p)}
-                      >
+                      <button type="button" className="btn-ghost btn-sm" onClick={() => openEdit(p)}>
                         Edit
                       </button>
                       <button
@@ -589,23 +478,23 @@ export default function ParishesAdmin() {
         }
       >
         <form id="parish-form" onSubmit={handleSave} className="space-y-5">
+          <Field label="Parish name" required>
+            <input
+              className="input"
+              value={draft.name}
+              onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))}
+              maxLength={120}
+              required
+            />
+          </Field>
+
           <div className="grid gap-5 sm:grid-cols-2">
-            <Field label="Parish name" required>
-              <input
-                className="input"
-                value={draft.name}
-                onChange={(e) => set('name', e.target.value)}
-                maxLength={120}
-                required
-              />
-            </Field>
-            <Field label="Pastor's name" required>
+            <Field label="Pastor's name" hint="Pastors normally fill this in themselves.">
               <input
                 className="input"
                 value={draft.pastorName}
-                onChange={(e) => set('pastorName', e.target.value)}
+                onChange={(e) => setDraft((d) => ({ ...d, pastorName: e.target.value }))}
                 maxLength={120}
-                required
               />
             </Field>
             <Field label="Phone number" hint="Visible to admins only.">
@@ -613,95 +502,23 @@ export default function ParishesAdmin() {
                 className="input"
                 type="tel"
                 value={draft.phone}
-                onChange={(e) => set('phone', e.target.value)}
+                onChange={(e) => setDraft((d) => ({ ...d, phone: e.target.value }))}
                 maxLength={25}
               />
             </Field>
-            <Field label="Location" required>
-              <select
-                className="input"
-                value={draft.location}
-                onChange={(e) => set('location', e.target.value as LocationCode)}
-              >
-                {LOCATIONS.map((f) => (
-                  <option key={f} value={f}>
-                    {LOCATION_LABEL[f]}
-                  </option>
-                ))}
-              </select>
-            </Field>
-            <Field label="Zone">
-              <input
-                className="input"
-                list="admin-zones"
-                value={draft.zone}
-                onChange={(e) => set('zone', e.target.value)}
-                maxLength={120}
-              />
-              <datalist id="admin-zones">
-                {zonesFor(draft.location, zonesByLocation[draft.location] ?? []).map((z) => (
-                  <option key={z} value={z} />
-                ))}
-              </datalist>
-            </Field>
-            <Field label="Area">
-              <input
-                className="input"
-                list="admin-areas"
-                value={draft.area}
-                onChange={(e) => set('area', e.target.value)}
-                maxLength={120}
-              />
-              <datalist id="admin-areas">
-                {areasFor(draft.location, draft.zone, areasByZone[draft.zone] ?? []).map((a) => (
-                  <option key={a} value={a} />
-                ))}
-              </datalist>
-            </Field>
           </div>
 
-          <div className="grid gap-5 sm:grid-cols-4">
-            <Field label="Ordination">
-              <select
-                className="input"
-                value={draft.ordinationStatus}
-                onChange={(e) => set('ordinationStatus', e.target.value)}
-              >
-                {ORDINATION_STATUSES.map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
-                ))}
-              </select>
-            </Field>
-            <Field label="Year">
-              <input
-                className="input"
-                type="number"
-                value={draft.yearOfOrdination}
-                onChange={(e) => set('yearOfOrdination', e.target.value)}
-              />
-            </Field>
-            <Field label="Length of service">
-              <input
-                className="input"
-                value={draft.lengthOfService}
-                onChange={(e) => set('lengthOfService', e.target.value)}
-                maxLength={120}
-              />
-            </Field>
-            <Field label="Status" hint="Only active parishes appear on the form.">
-              <select
-                className="input"
-                value={draft.status}
-                onChange={(e) => set('status', e.target.value as ParishStatus)}
-              >
-                <option value="active">Active</option>
-                <option value="pending">Pending</option>
-                <option value="archived">Archived</option>
-              </select>
-            </Field>
-          </div>
+          <Field label="Status" hint="Only active parishes appear on the attendance form.">
+            <select
+              className="input"
+              value={draft.status}
+              onChange={(e) => setDraft((d) => ({ ...d, status: e.target.value as ParishStatus }))}
+            >
+              <option value="active">Active</option>
+              <option value="pending">Pending</option>
+              <option value="archived">Archived</option>
+            </select>
+          </Field>
         </form>
       </Modal>
     </div>

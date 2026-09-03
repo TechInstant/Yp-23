@@ -1,193 +1,74 @@
-import type { ChurchCategory, LocationCode } from '../types'
-
 /**
- * Youth Province 23 in full: Province → LocationCode → Zone → Area → Parish, exactly
- * as published in the two "Directory after Province Creation" documents.
+ * The province's parish list — names only.
  *
- * This is church structure only — parish names and where they sit. It carries
- * **no pastor names, no phone numbers and no addresses**: pastors supply those
- * themselves when they claim their parish, and the phone number goes straight
- * into the admin-only `parishContacts` collection. That is why this file is
- * safe to commit to a public repository.
+ * Transcribed from the two RCCG "Directory of ... Family after Province
+ * Creation - Youth 23" PDFs. The zone and area columns in those documents are
+ * deliberately NOT carried over: the province wants a flat list of parishes,
+ * with returns read per parish and province-wide.
  *
- * Keep it in step with the province as zones, areas and parishes are created.
+ * No pastor names and no phone numbers live here. Pastors enter their own, so
+ * this file is safe in a public repository.
+ *
+ * The admin "Load province directory" button writes exactly this list.
  */
 
-export interface AreaNode {
-  area: string
-  parishes: string[]
-}
-
-export interface ZoneNode {
-  zone: string
-  areas: AreaNode[]
-}
-
-export const PROVINCE_NAME = 'RCCG Youth Province 23'
-
-export const PROVINCE_STRUCTURE: Record<LocationCode, ZoneNode[]> = {
-  IFE: [
-    {
-      zone: 'KINGS PALACE ZONE',
-      areas: [
-        {
-          area: 'KINGS PALACE AREA',
-          parishes: ['KINGS PALACE', 'RCCG LIVING SEED CHURCH - THE MOVEMENT'],
-        },
-      ],
-    },
-    {
-      zone: 'KING DOMINANT ARMY ZONE',
-      areas: [
-        {
-          area: 'KING DOMINANT ARMY AREA',
-          parishes: ['KING DOMINANT ARMY', 'KINGS PORCH', 'KINGS POWER'],
-        },
-        {
-          area: 'SALVATION GARDEN AREA',
-          parishes: ['SALVATION GARDEN', 'MARANATHA', 'UPPER ROOM ASSEMBLY'],
-        },
-      ],
-    },
-    {
-      zone: 'KINGS LIGHT ZONE',
-      areas: [
-        { area: 'KINGS LIGHT AREA', parishes: ['KINGS LIGHT', 'KINGS HONOUR'] },
-        { area: 'ZION AREA', parishes: ['ZION', 'KINGS FAMILY', 'TRUTH AND LIFE'] },
-        {
-          area: 'KINGS PRAISE AREA',
-          parishes: ['KINGS PRAISE', 'KINGS PAVILION', 'RESURRECTION MORRO'],
-        },
-      ],
-    },
-    {
-      zone: 'KINGS WORD ZONE',
-      areas: [
-        { area: 'KINGS WORD AREA', parishes: ['KINGS WORD', 'KINGS COURT ARENA'] },
-        { area: 'KINGS THRONE AREA', parishes: ['KINGS THRONE', 'KINGS FAVOUR'] },
-      ],
-    },
-  ],
-  EDE: [
-    {
-      zone: 'EXCEL (YOUTH CHURCH) ZONE',
-      areas: [
-        {
-          area: 'EXCEL (YOUTH CHURCH) AREA',
-          parishes: [
-            'EXCEL (YOUTH CHURCH)',
-            'EXCELLENT GRACE ARENA',
-            'HIS MAJESTY',
-            'OVERFLOWING PARISH',
-          ],
-        },
-        {
-          area: 'MAGNIFY MERCY ARENA AREA',
-          parishes: ['MAGNIFY MERCY ARENA', 'WINNERS ARENA'],
-        },
-        {
-          // Printed after PREVAILERS FORT AREA in the Ede PDF, but numbered
-          // area 3 and carrying serials 7-10, i.e. before JESUS GRACE ZONE —
-          // so it belongs to this zone. Move it in Admin → Parishes if the
-          // province says otherwise.
-          area: 'GLORIOUS YOUTH ASSEMBLY AREA',
-          parishes: [
-            'GLORIOUS YOUTH ASSEMBLY',
-            'COMFORTER',
-            'RCCG WORD ASSEMBLY',
-            "POTTER'S HOUSE PARISH",
-          ],
-        },
-      ],
-    },
-    {
-      zone: 'JESUS GRACE ZONE',
-      areas: [
-        { area: 'JESUS GRACE AREA', parishes: ['JESUS GRACE', 'DOMINION ARENA'] },
-        {
-          area: 'PREVAILERS FORT AREA',
-          parishes: ['PREVAILERS FORT', 'THE PRECIOUS PARISH', 'TRINITY ASSEMBLY (BS)'],
-        },
-      ],
-    },
-  ],
-}
-
-/**
- * Listed in the Ife directory as "two more parishes newly planted yet to be
- * fixed" — no zone or area assigned yet.
- */
-export const UNASSIGNED_PARISHES: { location: LocationCode; name: string }[] = [
-  { location: 'IFE', name: 'POWER CATHEDRAL' },
-  { location: 'IFE', name: 'LIGHTHOUSE' },
+/** Parishes already established when the province was created. */
+export const DIRECTORY_PARISHES: string[] = [
+  'COMFORTER',
+  'DOMINION ARENA',
+  'EXCEL (YOUTH CHURCH)',
+  'EXCELLENT GRACE ARENA',
+  'GLORIOUS YOUTH ASSEMBLY',
+  'HIS MAJESTY',
+  'JESUS GRACE',
+  'KING DOMINANT ARMY',
+  'KINGS COURT ARENA',
+  'KINGS FAMILY',
+  'KINGS FAVOUR',
+  'KINGS HONOUR',
+  'KINGS LIGHT',
+  'KINGS PALACE',
+  'KINGS PAVILION',
+  'KINGS PORCH',
+  'KINGS POWER',
+  'KINGS PRAISE',
+  'KINGS THRONE',
+  'KINGS WORD',
+  'MAGNIFY MERCY ARENA',
+  'MARANATHA',
+  'OVERFLOWING PARISH',
+  "POTTER'S HOUSE PARISH",
+  'PREVAILERS FORT',
+  'RCCG LIVING SEED CHURCH - THE MOVEMENT',
+  'RCCG WORD ASSEMBLY',
+  'RESURRECTION MORRO',
+  'SALVATION GARDEN',
+  'THE PRECIOUS PARISH',
+  'TRINITY ASSEMBLY (BS)',
+  'TRUTH AND LIFE',
+  'UPPER ROOM ASSEMBLY',
+  'WINNERS ARENA',
+  'ZION',
 ]
 
-export const OTHER = '__other__'
-
-/** Official zones for a location, plus any extra zones already in the database. */
-export function zonesFor(location: LocationCode | '', fromDb: string[] = []): string[] {
-  if (!location) return []
-  const official = PROVINCE_STRUCTURE[location].map((z) => z.zone)
-  const extra = fromDb.filter((z) => z && !official.includes(z))
-  return [...official, ...extra.sort()]
-}
-
-/** Official areas for a zone, plus any extra areas already in the database. */
-export function areasFor(
-  location: LocationCode | '',
-  zone: string,
-  fromDb: string[] = [],
-): string[] {
-  if (!location || !zone) return []
-  const official =
-    PROVINCE_STRUCTURE[location].find((z) => z.zone === zone)?.areas.map((a) => a.area) ?? []
-  const extra = fromDb.filter((a) => a && !official.includes(a))
-  return [...official, ...extra.sort()]
-}
-
 /**
- * A church's role, worked out from the directory itself: the zone headquarters
- * is the church whose name is the zone name without the word "ZONE", and the
- * area headquarters likewise. So KINGS PALACE — in KINGS PALACE ZONE, KINGS
- * PALACE AREA — is all three at once, and is recorded at its highest role.
+ * "Two more parishes newly planted yet to be fixed" in the Ife directory. They
+ * load as `pending` so the province confirms them before they appear on the
+ * attendance form.
  */
-export function categoryFor(name: string, zone: string, area: string): ChurchCategory {
-  const n = name.trim().toUpperCase()
-  if (zone && n === zone.trim().toUpperCase().replace(/\s+ZONE$/, '')) return 'ZONE'
-  if (area && n === area.trim().toUpperCase().replace(/\s+AREA$/, '')) return 'AREA'
-  return 'PARISH'
-}
+export const NEWLY_PLANTED: string[] = ['POWER CATHEDRAL', 'LIGHTHOUSE']
 
 export interface DirectoryParish {
   name: string
-  location: LocationCode
-  zone: string
-  area: string
-  category: ChurchCategory
+  status: 'active' | 'pending'
 }
 
-/** The whole directory flattened — what the admin "Load directory" action writes. */
+/** The whole directory — what the admin "Load province directory" action writes. */
 export function flattenDirectory(): DirectoryParish[] {
-  const out: DirectoryParish[] = []
-  for (const location of Object.keys(PROVINCE_STRUCTURE) as LocationCode[]) {
-    for (const zone of PROVINCE_STRUCTURE[location]) {
-      for (const area of zone.areas) {
-        for (const name of area.parishes) {
-          out.push({
-            name,
-            location,
-            zone: zone.zone,
-            area: area.area,
-            category: categoryFor(name, zone.zone, area.area),
-          })
-        }
-      }
-    }
-  }
-  for (const p of UNASSIGNED_PARISHES) {
-    out.push({ name: p.name, location: p.location, zone: '', area: '', category: 'PARISH' })
-  }
-  return out
+  return [
+    ...DIRECTORY_PARISHES.map((name) => ({ name, status: 'active' as const })),
+    ...NEWLY_PLANTED.map((name) => ({ name, status: 'pending' as const })),
+  ]
 }
 
-export const DIRECTORY_COUNT = flattenDirectory().length
+export const DIRECTORY_COUNT = DIRECTORY_PARISHES.length + NEWLY_PLANTED.length

@@ -12,7 +12,6 @@ import {
   latestSelectableSunday,
   SEASON_START,
 } from '../lib/sundays'
-import { LOCATION_LABEL, type LocationCode, type Parish } from '../types'
 
 type Status =
   | { kind: 'idle' }
@@ -42,21 +41,14 @@ export default function SubmitAttendance() {
   const started = hasStarted()
   const parish = active.find((p) => p.id === parishId) ?? null
 
-  /** Grouped by location so a 37-entry dropdown stays navigable. */
-  const grouped = useMemo(() => {
-    const map = new Map<LocationCode, Parish[]>()
-    for (const p of active) {
-      const list = map.get(p.location)
-      if (list) list.push(p)
-      else map.set(p.location, [p])
-    }
-    for (const list of map.values()) list.sort((a, b) => a.name.localeCompare(b.name))
-    return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0]))
-  }, [active])
+  const options = useMemo(
+    () => [...active].sort((a, b) => a.name.localeCompare(b.name)),
+    [active],
+  )
 
-  // Show what is already on file for this parish/Sunday before the pastor
-  // fills anything in — the write is create-only, so a duplicate is impossible,
-  // but discovering that after typing is needlessly annoying.
+  // Show what is already on file for this parish/Sunday before the pastor fills
+  // anything in — the write is create-only, so a duplicate is impossible, but
+  // discovering that after typing is needlessly annoying.
   useEffect(() => {
     if (!parishId || !date) {
       setExisting(null)
@@ -119,10 +111,6 @@ export default function SubmitAttendance() {
         parishId: parish.id,
         parishName: parish.name,
         pastorName: pastorName.trim(),
-        location: parish.location,
-        zone: parish.zone,
-        area: parish.area,
-        category: parish.category,
         date,
         attendance: count,
         note: note.trim(),
@@ -131,8 +119,8 @@ export default function SubmitAttendance() {
         updatedAt: serverTimestamp(),
       })
 
-      // Refresh the province's contact card for this parish. Best-effort: the
-      // return is already saved and is the thing that matters.
+      // Refresh the province's contact card. Best-effort: the return is already
+      // saved and is the thing that matters.
       try {
         await setDoc(
           doc(db, COLLECTIONS.parishContacts, parish.id),
@@ -207,7 +195,7 @@ export default function SubmitAttendance() {
       )}
 
       <form onSubmit={handleSubmit} className="card space-y-5 p-6">
-        <Field label="Parish" required hint="Can't find yours? Register it first — link below.">
+        <Field label="Parish" required hint="Can't find yours? Register it — link below.">
           <select
             className="input"
             value={parishId}
@@ -215,28 +203,13 @@ export default function SubmitAttendance() {
             required
           >
             <option value="">Select your parish…</option>
-            {grouped.map(([location, list]) => (
-              <optgroup key={location} label={LOCATION_LABEL[location]}>
-                {list.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
-                ))}
-              </optgroup>
+            {options.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
             ))}
           </select>
         </Field>
-
-        {parish && (
-          <div className="rounded-lg bg-navy-50 px-4 py-3 text-sm">
-            <p className="font-semibold text-navy-900">{parish.name}</p>
-            <p className="mt-0.5 text-navy-600">
-              {LOCATION_LABEL[parish.location]}
-              {parish.zone && ` · ${parish.zone}`}
-              {parish.area && ` · ${parish.area}`}
-            </p>
-          </div>
-        )}
 
         <div className="grid gap-5 sm:grid-cols-2">
           <Field label="Name of the pastor" required>
@@ -244,7 +217,7 @@ export default function SubmitAttendance() {
               className="input"
               value={pastorName}
               onChange={(e) => setPastorName(e.target.value)}
-              placeholder="e.g. PST AMAS AMAJO"
+              placeholder="Your full name"
               maxLength={120}
               autoComplete="name"
               required

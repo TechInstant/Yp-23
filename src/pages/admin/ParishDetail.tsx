@@ -11,7 +11,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
-import { Alert, LocationBadge, Spinner, StatTile, StatusBadge } from '../../components/ui'
+import { Alert, Spinner, StatTile, StatusBadge } from '../../components/ui'
 import { useParishContacts } from '../../hooks/useParishContacts'
 import { useParishes } from '../../hooks/useParishes'
 import { AXIS_TICK, CHART, TOOLTIP_STYLE } from '../../lib/chartTheme'
@@ -23,7 +23,7 @@ import type { AttendanceRecord } from '../../types'
 export default function ParishDetail() {
   const { parishId = '' } = useParams()
   const { parishes, loading: parishesLoading } = useParishes()
-  const { phones } = useParishContacts()
+  const { phones, contacts } = useParishContacts()
 
   const [records, setRecords] = useState<AttendanceRecord[]>([])
   const [loading, setLoading] = useState(true)
@@ -80,6 +80,8 @@ export default function ParishDetail() {
     )
   }
 
+  const pastorName = contacts[parish.id]?.pastorName || parish.pastorName
+
   return (
     <div className="space-y-6">
       <div>
@@ -88,20 +90,17 @@ export default function ParishDetail() {
         </Link>
         <div className="mt-2 flex flex-wrap items-center gap-3">
           <h1 className="text-2xl font-bold text-navy-900">{parish.name}</h1>
-          <LocationBadge location={parish.location} />
           <StatusBadge status={parish.status} />
         </div>
         <p className="mt-1 text-sm text-navy-600">
-          {parish.pastorName}
-          {parish.ordinationStatus && ` · ${parish.ordinationStatus}`}
-          {parish.yearOfOrdination ? ` (${parish.yearOfOrdination})` : ''}
-        </p>
-        <p className="mt-0.5 text-sm text-navy-500">
-          {[parish.zone, parish.area].filter(Boolean).join(' · ') || 'No zone or area set'}
+          {pastorName || <span className="italic text-navy-400">No pastor on record</span>}
         </p>
         {phones[parish.id] && (
           <p className="mt-1 text-sm">
-            <a href={`tel:${phones[parish.id]}`} className="font-medium text-navy-800 hover:underline">
+            <a
+              href={`tel:${phones[parish.id]}`}
+              className="font-medium text-navy-800 hover:underline"
+            >
               {phones[parish.id]}
             </a>
           </p>
@@ -121,9 +120,13 @@ export default function ParishDetail() {
               label="Latest figure"
               value={stats.latest.toLocaleString()}
               trend={stats.changePct}
-              hint="recent form vs opening form"
+              hint="recent average vs opening average"
             />
-            <StatTile label="Average" value={stats.average.toLocaleString()} hint={`${stats.returns} returns`} />
+            <StatTile
+              label="Average"
+              value={stats.average.toLocaleString()}
+              hint={`${stats.returns} returns`}
+            />
             <StatTile label="Best Sunday" value={stats.best.toLocaleString()} />
             <StatTile label="Lowest Sunday" value={stats.lowest.toLocaleString()} />
           </section>
@@ -145,12 +148,19 @@ export default function ParishDetail() {
                     axisLine={{ stroke: CHART.grid }}
                     minTickGap={24}
                   />
-                  <YAxis tick={AXIS_TICK} tickLine={false} axisLine={false} allowDecimals={false} width={52} />
+                  <YAxis
+                    tick={AXIS_TICK}
+                    tickLine={false}
+                    axisLine={false}
+                    allowDecimals={false}
+                    width={52}
+                  />
                   <Tooltip
                     cursor={{ stroke: CHART.reference, strokeWidth: 1 }}
                     labelFormatter={(v) => formatSundayLong(String(v))}
                     formatter={(value: number, _n, item) => [
-                      value.toLocaleString() + (item?.payload?.note ? ` — ${item.payload.note}` : ''),
+                      value.toLocaleString() +
+                        (item?.payload?.note ? ` — ${item.payload.note}` : ''),
                       'In attendance',
                     ]}
                     contentStyle={TOOLTIP_STYLE}
@@ -181,6 +191,7 @@ export default function ParishDetail() {
                     toCsv(records, [
                       { key: 'date', header: 'Sunday' },
                       { key: 'attendance', header: 'Attendance' },
+                      { key: 'pastorName', header: 'Filed by' },
                       { key: 'note', header: 'Note' },
                     ]),
                   )
@@ -189,26 +200,30 @@ export default function ParishDetail() {
                 Export CSV
               </button>
             </div>
-            <table className="w-full">
-              <thead className="bg-navy-50">
-                <tr>
-                  <th className="th">Sunday</th>
-                  <th className="th text-right">Attendance</th>
-                  <th className="th">Note</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-navy-50">
-                {[...records].reverse().map((r) => (
-                  <tr key={r.id}>
-                    <td className="td">{formatSundayLong(r.date)}</td>
-                    <td className="td text-right font-semibold tabular-nums">
-                      {r.attendance.toLocaleString()}
-                    </td>
-                    <td className="td text-navy-500">{r.note || '—'}</td>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[560px]">
+                <thead className="bg-navy-50">
+                  <tr>
+                    <th className="th">Sunday</th>
+                    <th className="th text-right">Attendance</th>
+                    <th className="th">Filed by</th>
+                    <th className="th">Note</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-navy-50">
+                  {[...records].reverse().map((r) => (
+                    <tr key={r.id}>
+                      <td className="td whitespace-nowrap">{formatSundayLong(r.date)}</td>
+                      <td className="td text-right font-semibold tabular-nums">
+                        {r.attendance.toLocaleString()}
+                      </td>
+                      <td className="td text-navy-600">{r.pastorName || '—'}</td>
+                      <td className="td text-navy-500">{r.note || '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </section>
         </>
       )}

@@ -1,0 +1,153 @@
+rules_version = '2';
+
+// RCCG Youth Province 23 — attendance portal.
+//
+// Threat model: the parish registration form and the attendance form are open to
+// the public (pastors submit from their phones, no account). So the rules — not
+// the UI — are what stop bad data and protect pastors' phone numbers.
+//
+//   parishes/{id}        public read  (needed by the dropdowns), public create
+//                        (self-registration, forced to status "pending"),
+//                        admin-only update/delete.  NO phone number here.
+//   parishContacts/{id}  phone number. Public create only (write-once, alongside
+//                        the parish). Admin-only read.
+//   attendance/{id}      public create, admin-only update/delete. The doc id is
+//                        "{parishId}_{YYYY-MM-DD}", so a second submission for
+//                        the same Sunday collides with the first instead of
+//                        silently duplicating the parish in the charts.
+//   admins/{uid}         the allow-list. Written from the Firebase console or
+//                        scripts/make-admin.mjs only — never from a client.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    // The tracking window: first Sunday of September 2026 through the last
+    // Sunday of December 2029. Kept in sync with src/lib/sundays.ts.
+    function isTrackedSunday(d) {
+      return d is string
+        && d.matches('^20(2[6-9])-[0-1][0-9]-[0-3][0-9]$')
+        && d >= '2026-09-06'
+        && d <= '2029-12-30';
+    }
+
+    match /admins/{uid} {
+      // An admin may read the allow-list; nobody may edit it from a browser.
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    match /parishes/{parishId} {
+      allow read: if true;
+
+      // Admins add parishes from the admin panel (status "active", source
+      // "admin"); everyone else goes through the public registration form,
+      // which may only ever produce a pending self-registration.
+      allow create: if isAdmin() ||
+                    (
+                      incoming().keys().hasOnly([
+                        'name', 'pastorName', 'address', 'family', 'zone', 'area',
+                        'ordinationStatus', 'yearOfOrdination', 'lengthOfService',
+                        'status', 'source', 'createdAt', 'updatedAt'
+                      ])
+                    && incoming().name is string
+                    && incoming().name.size() >= 2
+                    && incoming().name.size() <= 120
+                    && incoming().pastorName is string
+                    && incoming().pastorName.size() >= 2
+                    && incoming().pastorName.size() <= 120
+                    && incoming().address is string
+                    && incoming().address.size() <= 300
+                    && incoming().family in ['IFE', 'EDE']
+                    && incoming().zone is string
+                    && incoming().zone.size() <= 120
+                    && incoming().area is string
+                    && incoming().area.size() <= 120
+                      && incoming().status == 'pending'
+                      && incoming().source == 'self-registration'
+                      && incoming().createdAt == request.time
+                    );
+
+      // Claiming a parish. The province directory is loaded with parish names
+      // and their zone/area but no pastor, so the pastor in charge fills in
+      // their own details from the public form. It is a one-time write: once
+      // pastorName is set this branch stops matching, and only an admin can
+      // change it afterwards. Nothing here can touch name, family, zone, area
+      // or status.
+      allow update: if isAdmin() ||
+                    (
+                      resource.data.pastorName == ''
+                      && incoming().diff(resource.data).affectedKeys().hasOnly([
+                           'pastorName', 'ordinationStatus', 'yearOfOrdination',
+                           'lengthOfService', 'address', 'updatedAt'
+                         ])
+                      && incoming().pastorName is string
+                      && incoming().pastorName.size() >= 2
+                      && incoming().pastorName.size() <= 120
+                      && incoming().address is string
+                      && incoming().address.size() <= 300
+                    );
+
+      allow delete: if isAdmin();
+    }
+
+    match /parishContacts/{parishId} {
+      // Phone numbers are PII: never readable by the public, even though the
+      // parish record itself is.
+      allow read: if isAdmin();
+
+      // Write-once from the registration form; after that only an admin can
+      // change it. Admins may also create one outright — including an empty
+      // phone, for a parish added before its number is known.
+      allow create: if isAdmin() ||
+                    (
+                      incoming().keys().hasOnly(['phone', 'createdAt', 'updatedAt'])
+                      && incoming().phone is string
+                      && incoming().phone.size() >= 7
+                      && incoming().phone.size() <= 25
+                      && incoming().createdAt == request.time
+                    );
+
+      allow update, delete: if isAdmin();
+    }
+
+    match /attendance/{recordId} {
+      // Aggregate attendance figures are not sensitive, and parishes should be
+      // able to see the province-wide chart.
+      allow read: if true;
+
+      // Admins record returns phoned in by a parish, so they are exempt from
+      // the create-only guard below (source "admin" rather than "parish-form").
+      allow create: if isAdmin() ||
+                    (
+                      recordId == incoming().parishId + '_' + incoming().date
+                      && incoming().keys().hasOnly([
+                           'parishId', 'parishName', 'family', 'zone', 'area',
+                           'date', 'attendance', 'note', 'source', 'createdAt', 'updatedAt'
+                         ])
+                      && exists(/databases/$(database)/documents/parishes/$(incoming().parishId))
+                      && isTrackedSunday(incoming().date)
+                      && incoming().attendance is int
+                      && incoming().attendance >= 0
+                      && incoming().attendance <= 100000
+                      && incoming().note is string
+                      && incoming().note.size() <= 300
+                      && incoming().source == 'parish-form'
+                      && incoming().createdAt == request.time
+                    );
+
+      allow update, delete: if isAdmin();
+    }
+  }
+}

@@ -1,0 +1,19 @@
+node_modules
+dist
+# Everything except the committed .env.example — this also catches .env.backup,
+# .env.production and anything else holding real keys.
+.env
+.env.*
+!.env.example
+
+# The seeded directory carries pastors' personal phone numbers and this repo is
+# public. It is operational church data, not source, so it stays on the admin's
+# machine. Regenerate the date files with `npm run gen-sundays`; parishes.json
+# and parishes.csv are transcribed from the two RCCG directory PDFs.
+seed/
+*.log
+service-account.json
+serviceAccountKey.json
+.DS_Store
+.vscode
+.firebase

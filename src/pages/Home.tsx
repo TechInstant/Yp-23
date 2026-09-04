@@ -64,7 +64,7 @@ export default function Home() {
               The Redeemed Christian Church of God
             </p>
             <h1 className="mt-2 text-3xl font-bold leading-tight text-navy-900 sm:text-4xl">
-              Youth Province 23 weekly attendance report
+              Youth Province 23 Weekly Attendance Report
             </h1>
             <p className="mt-4 max-w-xl text-navy-600">
               Every parish in each location must submit their Sunday attendance, starting from{' '}

@@ -15,7 +15,7 @@ import { currentReportingSunday, formatSunday, formatSundayLong, resolveRange } 
  * complete list.
  */
 
-/** 07034936069 -> 2347034936069, which is what wa.me expects. */
+/** 07024444000 -> 2347024444000, which is what wa.me expects. */
 function whatsappNumber(phone: string): string | null {
   const digits = phone.replace(/\D/g, '')
   if (digits.startsWith('234') && digits.length >= 13) return digits

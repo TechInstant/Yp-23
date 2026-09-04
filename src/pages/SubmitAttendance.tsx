@@ -231,7 +231,7 @@ export default function SubmitAttendance() {
               inputMode="tel"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              placeholder="e.g. 07034936069"
+              placeholder="e.g. 07024444000"
               maxLength={25}
               autoComplete="tel"
               required

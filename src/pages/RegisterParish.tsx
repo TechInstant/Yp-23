@@ -6,7 +6,7 @@ import { useParishes } from '../hooks/useParishes'
 import { COLLECTIONS, db } from '../lib/firebase'
 
 /**
- * Claiming a parish: a pastor puts their name and number against a parish that
+ * Confirming a parish: a pastor puts their name and number against a parish that
  * is already in the province directory, or adds one the directory does not have
  * yet.
  *
@@ -23,7 +23,7 @@ function normalisePhone(raw: string): string {
 export default function RegisterParish() {
   const { parishes, loading } = useParishes()
 
-  const [mode, setMode] = useState<'claim' | 'new'>('claim')
+  const [mode, setMode] = useState<'confirm' | 'new'>('confirm')
   const [parishId, setParishId] = useState('')
   const [newName, setNewName] = useState('')
   const [pastorName, setPastorName] = useState('')
@@ -47,17 +47,25 @@ export default function RegisterParish() {
     [parishes],
   )
 
+  const selected = parishes.find((p) => p.id === parishId) ?? null
+  // A parish is confirmed once a pastor's name is on it. The rules refuse a
+  // second confirmation, so say so here rather than letting someone fill the
+  // whole form and be turned away by a permission error at the end.
+  const alreadyConfirmed = Boolean(selected?.pastorName.trim())
+
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault()
     setFailure(null)
 
     const found: Record<string, string> = {}
-    if (mode === 'claim') {
+    if (mode === 'confirm') {
       if (!parishId) found.parish = 'Select your parish.'
+      else if (alreadyConfirmed)
+        found.parish = `${selected?.name} has already been confirmed by ${selected?.pastorName}. Ask the province to change it.`
     } else {
       if (newName.trim().length < 2) found.name = 'Enter the parish name.'
       else if (existingNames.has(newName.trim().toUpperCase()))
-        found.name = 'That parish is already listed — find it under “Claim your parish”.'
+        found.name = 'That parish is already listed — find it under “Confirm your parish”.'
     }
     if (pastorName.trim().length < 2) found.pastorName = 'Enter your full name.'
     const cleanPhone = normalisePhone(phone)
@@ -72,7 +80,7 @@ export default function RegisterParish() {
       let id: string
       let label: string
 
-      if (mode === 'claim') {
+      if (mode === 'confirm') {
         const parish = options.find((p) => p.id === parishId)
         if (!parish) return
         await updateDoc(doc(db, COLLECTIONS.parishes, parish.id), {
@@ -127,7 +135,7 @@ export default function RegisterParish() {
   return (
     <div className="mx-auto max-w-xl space-y-6">
       <header>
-        <h1 className="text-2xl font-bold text-navy-900">Claim your parish</h1>
+        <h1 className="text-2xl font-bold text-navy-900">Confirm your parish</h1>
         <p className="mt-2 text-navy-600">
           Put your name and number against your parish so the province can reach you. You only
           need to do this once.
@@ -153,9 +161,11 @@ export default function RegisterParish() {
         </Alert>
       )}
 
-      <form onSubmit={handleSubmit} className="card space-y-5 p-6">
-        <div className="flex rounded-lg border border-navy-200 bg-navy-50 p-1">
-          {(['claim', 'new'] as const).map((m) => (
+      <form onSubmit={handleSubmit} className="card space-y-5 p-5 sm:p-6">
+        {/* Stacked on a phone: side by side, "My parish is not listed" squeezes
+            to two cramped lines inside a 360px screen. */}
+        <div className="flex flex-col gap-1 rounded-lg border border-navy-200 bg-navy-50 p-1 sm:flex-row">
+          {(['confirm', 'new'] as const).map((m) => (
             <button
               key={m}
               type="button"
@@ -163,16 +173,16 @@ export default function RegisterParish() {
                 setMode(m)
                 setErrors({})
               }}
-              className={`flex-1 rounded-md px-3 py-2 text-sm font-semibold transition ${
+              className={`rounded-md px-3 py-2 text-sm font-semibold transition sm:flex-1 ${
                 mode === m ? 'bg-white text-navy-900 shadow-sm' : 'text-navy-600'
               }`}
             >
-              {m === 'claim' ? 'Claim your parish' : 'My parish is not listed'}
+              {m === 'confirm' ? 'Confirm your parish' : 'My parish is not listed'}
             </button>
           ))}
         </div>
 
-        {mode === 'claim' ? (
+        {mode === 'confirm' ? (
           <Field label="Parish" required error={errors.parish}>
             <select
               className="input"
@@ -183,7 +193,7 @@ export default function RegisterParish() {
               {options.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.name}
-                  {p.pastorName ? ` — ${p.pastorName}` : ''}
+                  {p.pastorName ? ` — already confirmed by ${p.pastorName}` : ''}
                 </option>
               ))}
             </select>
@@ -235,8 +245,12 @@ export default function RegisterParish() {
         </Field>
 
         <div className="border-t border-navy-100 pt-5">
-          <button type="submit" className="btn-primary" disabled={saving}>
-            {saving ? 'Saving…' : mode === 'claim' ? 'Claim this parish' : 'Submit for approval'}
+          <button
+            type="submit"
+            className="btn-primary"
+            disabled={saving || (mode === 'confirm' && alreadyConfirmed)}
+          >
+            {saving ? 'Saving…' : mode === 'confirm' ? 'Confirm this parish' : 'Submit for approval'}
           </button>
         </div>
       </form>

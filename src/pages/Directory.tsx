@@ -20,7 +20,7 @@ export default function Directory() {
       .sort((a, b) => a.name.localeCompare(b.name))
   }, [parishes, search])
 
-  const claimed = parishes.filter((p) => p.pastorName.trim()).length
+  const confirmed = parishes.filter((p) => p.pastorName.trim()).length
 
   if (loading) return <Spinner label="Loading the directory…" />
 
@@ -29,7 +29,7 @@ export default function Directory() {
       <header>
         <h1 className="text-2xl font-bold text-navy-900">Parish directory</h1>
         <p className="mt-2 text-navy-600">
-          {parishes.length} parishes in Youth Province 23 · {claimed} with a pastor on record.
+          {parishes.length} parishes in Youth Province 23 · {confirmed} with a pastor on record.
         </p>
       </header>
 

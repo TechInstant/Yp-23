@@ -5,7 +5,7 @@ import Logo from './Logo'
 const NAV = [
   { to: '/', label: 'Home', end: true },
   { to: '/submit', label: 'Submit attendance' },
-  { to: '/register', label: 'Claim your parish' },
+  { to: '/register', label: 'Confirm your parish' },
   { to: '/directory', label: 'Directory' },
 ]
 

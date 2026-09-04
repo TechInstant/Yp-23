@@ -119,14 +119,14 @@ export default function Pastors() {
         <StatTile
           label="Numbers on file"
           value={`${withPhone}/${active.length}`}
-          hint="collected from returns and claims"
+          hint="collected from returns and confirmations"
         />
         <StatTile label="Parishes" value={String(parishes.length)} hint="including pending" />
       </section>
 
       {withPhone === 0 && (
         <Alert tone="info" title="No phone numbers yet">
-          Numbers arrive as pastors claim their parish or submit a return. You can also type them
+          Numbers arrive as pastors confirm their parish or submit a return. You can also type them
           in under{' '}
           <Link to="/admin/parishes" className="font-medium underline">
             Parishes

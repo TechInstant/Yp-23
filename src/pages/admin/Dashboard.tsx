@@ -142,7 +142,7 @@ export default function Dashboard() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <div className="flex rounded-lg border border-navy-200 bg-white p-1">
+          <div className="flex max-w-full shrink-0 overflow-x-auto rounded-lg border border-navy-200 bg-white p-1">
             {(
               [
                 ['sundays', 'By Sunday'],

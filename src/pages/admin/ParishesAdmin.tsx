@@ -179,7 +179,7 @@ export default function ParishesAdmin() {
       }
       setMessage({
         tone: 'success',
-        text: `Added ${missing.length} parish${missing.length === 1 ? '' : 'es'}. Pastors can now claim them.`,
+        text: `Added ${missing.length} parish${missing.length === 1 ? '' : 'es'}. Pastors can now confirm them.`,
       })
     } catch (err) {
       setMessage({ tone: 'error', text: err instanceof Error ? err.message : String(err) })
@@ -410,7 +410,7 @@ export default function ParishesAdmin() {
                   </td>
                   <td className="td">
                     {contacts[p.id]?.pastorName || p.pastorName || (
-                      <span className="italic text-navy-300">Not claimed</span>
+                      <span className="italic text-navy-300">Not confirmed</span>
                     )}
                   </td>
                   <td className="td whitespace-nowrap">

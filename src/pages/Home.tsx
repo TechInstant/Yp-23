@@ -64,7 +64,7 @@ export default function Home() {
               The Redeemed Christian Church of God
             </p>
             <h1 className="mt-2 text-3xl font-bold leading-tight text-navy-900 sm:text-4xl">
-              Youth Province 23 weekly attendance returns
+              Youth Province 23 weekly attendance report
             </h1>
             <p className="mt-4 max-w-xl text-navy-600">
               Every parish in each location must submit their Sunday attendance, starting from{' '}
@@ -76,7 +76,7 @@ export default function Home() {
                 Submit this Sunday&apos;s attendance
               </Link>
               <Link to="/register" className="btn-ghost">
-                Claim your parish
+                Confirm your parish
               </Link>
             </div>
 
@@ -106,7 +106,7 @@ export default function Home() {
         <StepCard
           n="1"
           title="Find your parish"
-          body="Pick your parish from the list. If it is not there yet, claim or register it once and it appears from then on."
+          body="Pick your parish from the list. If it is not there yet, confirm or register it once and it appears from then on."
         />
         <StepCard
           n="2"

@@ -155,19 +155,22 @@ service cloud.firestore {
                       && incoming().createdAt == request.time
                     );
 
-      // Claiming a parish: the pastor in charge writes their own name against a
-      // parish already in the directory. Only the name — the phone number goes
-      // to parishContacts. Re-claiming is allowed so a parish that changes
-      // hands is not stuck with the previous pastor's name until an admin
-      // intervenes; the province sees every change through the contact card's
-      // updatedAt.
+      // Confirming a parish: the pastor in charge writes their own name against
+      // a parish already in the directory. Only the name — the phone number
+      // goes to parishContacts.
+      //
+      // Once confirmed it cannot be confirmed again from the public form. The
+      // parish list is public, so an open update would let anyone overwrite any
+      // pastor's name at will. A parish that genuinely changes hands is
+      // re-pointed by an admin, who is exempt from this check.
       allow update: if isAdmin() ||
                     (
                       incoming().diff(resource.data).affectedKeys().hasOnly([
                         'pastorName', 'updatedAt'
                       ])
+                      && resource.data.get('pastorName', '').trim().size() == 0
                       && incoming().pastorName is string
-                      && incoming().pastorName.size() >= 2
+                      && incoming().pastorName.trim().size() >= 2
                       && incoming().pastorName.size() <= 120
                     );
 

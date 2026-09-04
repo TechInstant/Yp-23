@@ -9,6 +9,17 @@
   body {
     @apply bg-navy-50 text-navy-950 font-sans antialiased;
   }
+
+  /*
+   * Last-resort guard against a stray wide element dragging the whole page
+   * sideways on a phone. `clip` rather than `hidden`: `hidden` turns the
+   * element into a scroll container, which silently breaks `position: sticky`
+   * on the headers inside it.
+   */
+  html,
+  body {
+    overflow-x: clip;
+  }
   /* Chrome/Safari draw spinners on number inputs that pastors fat-finger on
      mobile; the attendance box is typed, not stepped. */
   input[type='number']::-webkit-outer-spin-button,

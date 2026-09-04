@@ -39,11 +39,18 @@ export default function Logo({
 }) {
   const s = SIZES[size]
   return (
-    <span className="flex items-center gap-3">
-      <BrandMark height={s.mark} onDark={inverted} />
+    <span className="flex min-w-0 items-center gap-2 sm:gap-3">
+      {/* The lockup is a wide image with width:auto, so on a 320px screen it
+          would push the menu button off the header. Capping its width lets it
+          letterbox instead of overflowing. */}
+      <BrandMark
+        height={s.mark}
+        onDark={inverted}
+        className="max-w-[55vw] sm:max-w-none"
+      />
       {showSubtitle && (
         <span
-          className={`font-semibold uppercase tracking-[0.14em] ${s.sub} ${
+          className={`hidden font-semibold uppercase tracking-[0.14em] sm:inline-block ${s.sub} ${
             inverted ? 'text-navy-200' : 'text-navy-500'
           }`}
         >

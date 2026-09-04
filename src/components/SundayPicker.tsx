@@ -144,7 +144,9 @@ export default function SundayPicker({
         <div
           role="dialog"
           aria-label="Choose a Sunday"
-          className="absolute z-30 mt-2 w-[19rem] rounded-xl border border-navy-100 bg-white p-3 shadow-card"
+          // 19rem is 304px — wider than the space inside a padded card on a
+          // 320px phone, which pushed the calendar off the screen edge.
+          className="absolute z-30 mt-2 w-[19rem] max-w-[calc(100vw-2.5rem)] rounded-xl border border-navy-100 bg-white p-3 shadow-card"
         >
           <div className="flex items-center justify-between">
             <button

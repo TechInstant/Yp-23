@@ -17,6 +17,7 @@ import {
 } from 'recharts'
 import { Alert, Spinner, StatTile } from '../../components/ui'
 import { useAttendance } from '../../hooks/useAttendance'
+import { useIsNarrow } from '../../hooks/useIsNarrow'
 import { useParishes } from '../../hooks/useParishes'
 import {
   headline,
@@ -46,6 +47,7 @@ export default function Dashboard() {
   const [preset, setPreset] = useState<RangePresetKey>('last26')
   const range = useMemo(() => resolveRange(preset), [preset])
 
+  const narrow = useIsNarrow()
   const { parishes, active, loading: parishesLoading } = useParishes()
   const { records, loading: recordsLoading, error } = useAttendance(range)
 
@@ -250,7 +252,7 @@ export default function Dashboard() {
                   <ResponsiveContainer width="100%" height="100%">
                     <ComposedChart
                       data={series}
-                      margin={{ top: 4, right: 8, bottom: 0, left: -8 }}
+                      margin={{ top: 4, right: 8, bottom: 0, left: narrow ? 0 : -8 }}
                     >
                       <defs>
                         <linearGradient id="fillTotal" x1="0" y1="0" x2="0" y2="1">
@@ -332,7 +334,7 @@ export default function Dashboard() {
                 </p>
                 <div className="mt-6 h-64">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={series} margin={{ top: 4, right: 8, bottom: 0, left: -20 }}>
+                    <BarChart data={series} margin={{ top: 4, right: 8, bottom: 0, left: narrow ? -8 : -20 }}>
                       <CartesianGrid stroke={CHART.grid} vertical={false} />
                       <XAxis
                         dataKey="date"
@@ -376,7 +378,7 @@ export default function Dashboard() {
               </section>
             </>
           ) : (
-            <RemittanceSection rows={remittance} />
+            <RemittanceSection rows={remittance} narrow={narrow} />
           )}
 
           <section className="card p-5 sm:p-6">
@@ -393,12 +395,15 @@ export default function Dashboard() {
               </p>
             ) : (
               <>
-                <div className="mt-6" style={{ height: Math.max(220, leaderboard.length * 30) }}>
+                <div
+                  className="mt-6"
+                  style={{ height: Math.max(220, leaderboard.length * (narrow ? 36 : 30)) }}
+                >
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart
                       data={leaderboard}
                       layout="vertical"
-                      margin={{ top: 4, right: 48, bottom: 0, left: 8 }}
+                      margin={{ top: 4, right: narrow ? 34 : 48, bottom: 0, left: 0 }}
                     >
                       <CartesianGrid stroke={CHART.grid} horizontal={false} />
                       <XAxis
@@ -411,10 +416,17 @@ export default function Dashboard() {
                       <YAxis
                         type="category"
                         dataKey="parishName"
-                        tick={{ ...AXIS_TICK, fontSize: 11 }}
+                        tick={{ ...AXIS_TICK, fontSize: narrow ? 10 : 11 }}
                         tickLine={false}
                         axisLine={false}
-                        width={170}
+                        // 170px of church name on a 360px screen leaves almost
+                        // no plot area, so the bars disappear. Names are
+                        // shortened instead; the table underneath has them in
+                        // full.
+                        width={narrow ? 92 : 170}
+                        tickFormatter={(name: string) =>
+                          narrow && name.length > 13 ? `${name.slice(0, 12)}…` : name
+                        }
                       />
                       <Tooltip
                         cursor={{ fill: 'rgba(64, 85, 160, 0.08)' }}
@@ -524,8 +536,10 @@ export default function Dashboard() {
  */
 function RemittanceSection({
   rows,
+  narrow,
 }: {
   rows: ReturnType<typeof totalsByRemittance>
+  narrow: boolean
 }) {
   const periods = remittancePeriods()
 
@@ -553,7 +567,7 @@ function RemittanceSection({
 
       <div className="mt-6 h-72">
         <ResponsiveContainer width="100%" height="100%">
-          <ComposedChart data={rows} margin={{ top: 4, right: 8, bottom: 0, left: -8 }}>
+          <ComposedChart data={rows} margin={{ top: 4, right: 8, bottom: 0, left: narrow ? 0 : -8 }}>
             <CartesianGrid stroke={CHART.grid} vertical={false} />
             <XAxis
               dataKey="shortLabel"

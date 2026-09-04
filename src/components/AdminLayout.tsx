@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import Logo from './Logo'
@@ -37,6 +37,23 @@ export default function AdminLayout() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
+
+  // Close the drawer on Escape and stop the page behind it scrolling. Without
+  // the lock, dragging the drawer scrolls the dashboard underneath it, which
+  // reads as the menu being broken.
+  useEffect(() => {
+    if (!open) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false)
+    }
+    document.addEventListener('keydown', onKey)
+    const previous = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.removeEventListener('keydown', onKey)
+      document.body.style.overflow = previous
+    }
+  }, [open])
 
   async function handleLogout() {
     await logout()
@@ -88,11 +105,18 @@ export default function AdminLayout() {
 
   return (
     <div className="flex min-h-screen bg-navy-50">
-      <aside className="hidden w-64 shrink-0 flex-col bg-navy-900 p-4 lg:flex">{sidebar}</aside>
+      {/* The desktop sidebar scrolls independently and stays put while the
+          page moves — six nav items plus the account block do not fit a short
+          laptop window otherwise. */}
+      <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col overflow-y-auto bg-navy-900 p-4 lg:flex">
+        {sidebar}
+      </aside>
 
       {open && (
         <div className="fixed inset-0 z-50 flex lg:hidden">
-          <div className="flex w-64 flex-col bg-navy-900 p-4">{sidebar}</div>
+          <div className="flex w-[17rem] max-w-[85vw] flex-col overflow-y-auto bg-navy-900 p-4">
+            {sidebar}
+          </div>
           <button
             type="button"
             className="flex-1 bg-navy-950/50"
@@ -103,7 +127,9 @@ export default function AdminLayout() {
       )}
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex items-center gap-3 border-b border-navy-100 bg-white px-4 py-3 lg:hidden">
+        {/* Sticky, or the only way back to another page after scrolling a long
+            dashboard is to scroll all the way up again. */}
+        <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-navy-100 bg-white/95 px-4 py-3 backdrop-blur lg:hidden">
           <button
             type="button"
             className="rounded-lg border border-navy-200 p-2 text-navy-700"

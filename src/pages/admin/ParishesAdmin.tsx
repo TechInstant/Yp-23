@@ -386,7 +386,63 @@ export default function ParishesAdmin() {
           Clear the search, or add the parish if it is genuinely missing.
         </EmptyState>
       ) : (
-        <div className="card overflow-x-auto">
+        <>
+        {/* Same reasoning as the attendance list: four action buttons at the
+            right edge of a 700px table are off-screen on a phone. */}
+        <ul className="space-y-3 sm:hidden">
+          {filtered.map((p) => (
+            <li key={p.id} className="card space-y-3 p-4">
+              <div className="flex items-start justify-between gap-3">
+                <Link
+                  to={`/admin/parishes/${p.id}`}
+                  className="min-w-0 font-semibold text-navy-900 hover:underline"
+                >
+                  {p.name}
+                </Link>
+                <span className="shrink-0">
+                  <StatusBadge status={p.status} />
+                </span>
+              </div>
+
+              <div className="text-sm">
+                <p className="text-navy-600">
+                  {contacts[p.id]?.pastorName || p.pastorName || (
+                    <span className="italic text-navy-300">Not confirmed</span>
+                  )}
+                </p>
+                {phones[p.id] ? (
+                  <a
+                    href={`tel:${phones[p.id]}`}
+                    className="mt-0.5 inline-block font-medium text-navy-800 hover:underline"
+                  >
+                    {phones[p.id]}
+                  </a>
+                ) : (
+                  <p className="mt-0.5 text-navy-300">No number on file</p>
+                )}
+              </div>
+
+              <div className="flex flex-wrap gap-2 border-t border-navy-100 pt-3">
+                {p.status === 'pending' && (
+                  <button type="button" className="btn-gold btn-sm" onClick={() => void approve(p)}>
+                    Approve
+                  </button>
+                )}
+                <button type="button" className="btn-ghost btn-sm" onClick={() => openEdit(p)}>
+                  Edit
+                </button>
+                <button type="button" className="btn-ghost btn-sm" onClick={() => void archive(p)}>
+                  {p.status === 'archived' ? 'Restore' : 'Archive'}
+                </button>
+                <button type="button" className="btn-danger btn-sm" onClick={() => void remove(p)}>
+                  Delete
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
+
+        <div className="card hidden overflow-x-auto sm:block">
           <table className="w-full min-w-[700px]">
             <thead className="border-b border-navy-100 bg-navy-50">
               <tr>
@@ -460,6 +516,7 @@ export default function ParishesAdmin() {
             </tbody>
           </table>
         </div>
+        </>
       )}
 
       <Modal

@@ -237,7 +237,58 @@ export default function AttendanceAdmin() {
           Widen the date range, or record one on behalf of a parish that reported by phone.
         </EmptyState>
       ) : (
-        <div className="card overflow-x-auto">
+        <>
+        {/*
+          A six-column table needs 760px. On a 360px phone that means over half
+          of every row — including the Edit and Delete buttons, which sit
+          furthest right — is off-screen until you scroll sideways through it.
+          Phones get the same records as stacked cards instead; the table
+          returns at sm, where there is room for it.
+        */}
+        <ul className="space-y-3 sm:hidden">
+          {filtered.map((r) => (
+            <li key={r.id} className="card space-y-3 p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <Link
+                    to={`/admin/parishes/${r.parishId}`}
+                    className="block font-semibold text-navy-900 hover:underline"
+                  >
+                    {r.parishName}
+                  </Link>
+                  <p className="mt-0.5 text-sm text-navy-500">{formatSundayLong(r.date)}</p>
+                </div>
+                <span className="shrink-0 text-2xl font-bold tabular-nums text-navy-900">
+                  {r.attendance.toLocaleString()}
+                </span>
+              </div>
+
+              <p className="text-sm text-navy-600">
+                Filed by {r.pastorName || <span className="italic text-navy-400">unknown</span>}
+              </p>
+              {r.note && <p className="text-sm italic text-navy-500">{r.note}</p>}
+
+              <div className="flex gap-2 border-t border-navy-100 pt-3">
+                <button
+                  type="button"
+                  className="btn-ghost btn-sm flex-1"
+                  onClick={() => setEditing(r)}
+                >
+                  Edit
+                </button>
+                <button
+                  type="button"
+                  className="btn-danger btn-sm flex-1"
+                  onClick={() => void removeRecord(r)}
+                >
+                  Delete
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
+
+        <div className="card hidden overflow-x-auto sm:block">
           <table className="w-full min-w-[760px]">
             <thead className="border-b border-navy-100 bg-navy-50">
               <tr>
@@ -291,6 +342,7 @@ export default function AttendanceAdmin() {
             </tbody>
           </table>
         </div>
+        </>
       )}
 
       <EditModal record={editing} onClose={() => setEditing(null)} onSave={saveEdit} />

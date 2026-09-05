@@ -146,7 +146,7 @@ export default function Pastors() {
         <label className="flex items-center gap-2 text-sm font-medium text-navy-700">
           <input
             type="checkbox"
-            className="h-4 w-4 rounded border-navy-300"
+            className="h-4 w-4 shrink-0 rounded border-navy-300"
             checked={onlyMissing}
             onChange={(e) => setOnlyMissing(e.target.checked)}
           />
@@ -179,7 +179,7 @@ export default function Pastors() {
                   </p>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <span
                     className={`badge ${
                       row.reported ? 'bg-emerald-100 text-emerald-800' : 'bg-gold-100 text-gold-800'

@@ -56,3 +56,18 @@ export interface AttendanceRecord {
   createdAt?: unknown
   updatedAt?: unknown
 }
+
+/**
+ * A super admin opening one past Sunday for one parish.
+ *
+ * The document id is `{parishId}_{date}` — the same id as the attendance
+ * record it unlocks, so the rules can authorise a late return with one
+ * exists() and an exception cannot be pointed at another parish or week.
+ */
+export interface SubmissionException {
+  id: string
+  parishId: string
+  date: string
+  reason: string
+  grantedBy: string
+}

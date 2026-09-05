@@ -1,4 +1,5 @@
 import { initializeApp, type FirebaseApp, type FirebaseOptions } from 'firebase/app'
+import { initializeAppCheck, ReCaptchaV3Provider } from 'firebase/app-check'
 import { getAuth, type Auth } from 'firebase/auth'
 import { getFirestore, type Firestore } from 'firebase/firestore'
 
@@ -73,6 +74,33 @@ let initError: string | null = null
 if (missingFirebaseConfig.length === 0) {
   try {
     appInstance = initializeApp(config)
+
+    /*
+     * App Check — the only defence against scripted abuse of the open write
+     * paths, and free on the Spark plan with reCAPTCHA v3.
+     *
+     * The parish form takes no login, so without this anyone can post returns
+     * or overwrite contact numbers with a script. reCAPTCHA v3 is invisible:
+     * no puzzle, no checkbox, nothing for a pastor to do.
+     *
+     * Started only when a site key is present, so a build without one keeps
+     * working. That matters for the rollout order: ship the key, confirm
+     * requests are being verified in the console, and only then turn on
+     * enforcement — enforcing first would lock every visitor out.
+     */
+    const siteKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY?.trim()
+    if (siteKey) {
+      // A debug token lets localhost through without a real reCAPTCHA
+      // assessment; the console has to be told to trust the printed token.
+      if (import.meta.env.DEV) {
+        ;(self as unknown as Record<string, unknown>).FIREBASE_APPCHECK_DEBUG_TOKEN = true
+      }
+      initializeAppCheck(appInstance, {
+        provider: new ReCaptchaV3Provider(siteKey),
+        isTokenAutoRefreshEnabled: true,
+      })
+    }
+
     authInstance = getAuth(appInstance)
     dbInstance = getFirestore(appInstance)
   } catch (err) {
@@ -102,4 +130,6 @@ export const COLLECTIONS = {
   attendance: 'attendance',
   admins: 'admins',
   adminInvites: 'adminInvites',
+  /** Doc id is `{parishId}_{date}` — the same id as the return it unlocks. */
+  submissionExceptions: 'submissionExceptions',
 } as const

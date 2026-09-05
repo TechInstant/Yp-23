@@ -19,6 +19,9 @@ interface ImportMetaEnv {
   readonly VITE_STORAGE_BUCKET?: string
   readonly VITE_MESSAGING_SENDER_ID?: string
   readonly VITE_APP_ID?: string
+
+  /** reCAPTCHA v3 site key. App Check stays off until this is set. */
+  readonly VITE_RECAPTCHA_SITE_KEY?: string
 }
 
 interface ImportMeta {

@@ -242,6 +242,34 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    /**
+     * A super admin opening one past Sunday for one parish.
+     *
+     * The document id is deliberately the same as the attendance record it
+     * unlocks — `{parishId}_{date}` — so the attendance rule can authorise a
+     * late return with a single exists() on the id it already has, with no
+     * second lookup and no way to point an exception at a different parish.
+     *
+     * Readable by anyone: the submission form has to know whether to offer the
+     * date, and the document says only "this parish may file for this Sunday".
+     */
+    match /submissionExceptions/{exceptionId} {
+      allow read: if true;
+
+      allow create: if isSuperAdmin()
+                    && exceptionId == incoming().parishId + '_' + incoming().date
+                    && incoming().keys().hasOnly([
+                         'parishId', 'date', 'reason', 'grantedBy', 'createdAt'
+                       ])
+                    && isTrackedSunday(incoming().date)
+                    && incoming().reason is string
+                    && incoming().reason.size() <= 200
+                    && incoming().createdAt == request.time;
+
+      allow update: if false;
+      allow delete: if isSuperAdmin();
+    }
+
     match /attendance/{recordId} {
       // Aggregate attendance figures are not sensitive, and parishes should be
       // able to see the province-wide chart.
@@ -263,8 +291,14 @@ service cloud.firestore {
                          ])
                       && exists(/databases/$(database)/documents/parishes/$(incoming().parishId))
                       && isTrackedSunday(incoming().date)
-                      // On the Sunday itself, and no other day.
-                      && isToday(incoming().date)
+                      // On the Sunday itself — unless a super admin has opened
+                      // that exact Sunday for that exact parish. The exception
+                      // document carries the same id as this record, so it
+                      // cannot unlock a different parish or a different week.
+                      && (
+                        isToday(incoming().date)
+                        || exists(/databases/$(database)/documents/submissionExceptions/$(recordId))
+                      )
                       && incoming().pastorName is string
                       && incoming().pastorName.size() >= 2
                       && incoming().pastorName.size() <= 120

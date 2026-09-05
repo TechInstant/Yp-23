@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { deleteDoc, doc, serverTimestamp, setDoc, updateDoc, writeBatch } from 'firebase/firestore'
+import SubmissionExceptions from '../../components/SubmissionExceptions'
 import SundayPicker from '../../components/SundayPicker'
 import { Alert, EmptyState, Field, Modal, Spinner } from '../../components/ui'
 import { useAttendance } from '../../hooks/useAttendance'
@@ -364,6 +365,8 @@ export default function AttendanceAdmin() {
         </div>
         </>
       )}
+
+      <SubmissionExceptions parishes={active} />
 
       <EditModal record={editing} onClose={() => setEditing(null)} onSave={saveEdit} />
 

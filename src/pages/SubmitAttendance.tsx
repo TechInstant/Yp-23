@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore'
 import { Alert, Field, Spinner } from '../components/ui'
 import { useParishes } from '../hooks/useParishes'
+import { useSubmissionExceptions } from '../hooks/useSubmissionExceptions'
 import { COLLECTIONS, db } from '../lib/firebase'
 import {
   formatSundayLong,
@@ -30,8 +31,7 @@ export default function SubmitAttendance() {
   const [parishId, setParishId] = useState('')
   const [pastorName, setPastorName] = useState('')
   const [phone, setPhone] = useState('')
-  // Fixed, not chosen: a return may only be filed on the Sunday it is for.
-  const date = todayISO()
+  const [date, setDate] = useState(() => todayISO())
   const [attendance, setAttendance] = useState('')
   const [note, setNote] = useState('')
 
@@ -40,8 +40,19 @@ export default function SubmitAttendance() {
   const [checking, setChecking] = useState(false)
 
   const started = hasStarted()
-  const canSubmit = isSubmissionDay()
+  const openToday = isSubmissionDay()
   const nextSunday = nextSubmissionSunday()
+  const { exceptions } = useSubmissionExceptions()
+
+  // Sundays this parish may file for: today if it is one, plus any the
+  // province has re-opened for them specifically.
+  const allowedDates = useMemo(() => {
+    const granted = exceptions.filter((e) => e.parishId === parishId).map((e) => e.date)
+    const all = openToday ? [todayISO(), ...granted] : granted
+    return [...new Set(all)].sort().reverse()
+  }, [exceptions, parishId, openToday])
+
+  const canSubmit = allowedDates.length > 0
   const parish = active.find((p) => p.id === parishId) ?? null
 
   const options = useMemo(
@@ -75,6 +86,10 @@ export default function SubmitAttendance() {
     }
   }, [parishId, date])
 
+  useEffect(() => {
+    if (allowedDates.length > 0 && !allowedDates.includes(date)) setDate(allowedDates[0])
+  }, [allowedDates, date])
+
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault()
     if (!parish) return
@@ -90,13 +105,13 @@ export default function SubmitAttendance() {
       return
     }
 
-    // The date is today's, but the page could have sat open past midnight —
-    // in which case it is no longer Sunday and the write would be rejected.
-    if (!isSubmissionDay()) {
+    // The page could have sat open past midnight, in which case today's
+    // Sunday is no longer today and the write would be refused.
+    if (!allowedDates.includes(date)) {
       setStatus({
         kind: 'error',
         message:
-          'Returns can only be filed on the Sunday itself. Reload the page, or send your figure to the provincial admin.',
+          'Returns are filed on the Sunday itself. Reload the page, or send your figure to the provincial admin.',
       })
       return
     }
@@ -185,8 +200,8 @@ export default function SubmitAttendance() {
               submit your figure then.
             </p>
             <p className="mt-2">
-              If your parish missed a Sunday, the provincial admin can still record the figure for
-              you — send it to them.
+              If your parish missed a Sunday, send the figure to the provincial admin — they can
+              record it, or re-open that Sunday so you can file it yourself.
             </p>
           </Alert>
         )
@@ -256,10 +271,28 @@ export default function SubmitAttendance() {
         </div>
 
         <div className="grid gap-5 sm:grid-cols-2">
-          <Field label="Sunday" hint="Returns are filed on the day of the service.">
-            <p className="input bg-navy-50 font-medium text-navy-800">
-              {canSubmit ? formatSundayLong(date) : 'Not open today'}
-            </p>
+          <Field
+            label="Sunday"
+            hint={
+              allowedDates.length > 1
+                ? 'The province has re-opened an earlier Sunday for you.'
+                : 'Returns are filed on the day of the service.'
+            }
+          >
+            {allowedDates.length > 1 ? (
+              <select className="input" value={date} onChange={(e) => setDate(e.target.value)}>
+                {allowedDates.map((d) => (
+                  <option key={d} value={d}>
+                    {formatSundayLong(d)}
+                    {d === todayISO() ? ' (today)' : ' — re-opened for you'}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <p className="input bg-navy-50 font-medium text-navy-800">
+                {canSubmit ? formatSundayLong(date) : 'Not open today'}
+              </p>
+            )}
           </Field>
 
           <Field label="Number in attendance" required>

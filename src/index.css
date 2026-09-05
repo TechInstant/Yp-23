@@ -97,6 +97,25 @@
    * unreachable. Declared here the cascade does the right thing: `vh` applies
    * everywhere, `dvh` overrides it wherever it is understood.
    */
+  /*
+   * The admin shell is exactly one viewport tall and never scrolls itself.
+   * Scrolling happens inside <main>, so the header and sidebar cannot move —
+   * they are outside the scrolling element rather than sticky within it.
+   *
+   * `position: sticky` was tried first and did not hold: the header sits in a
+   * flex row shell, and a sticky element there depends on the containing
+   * block's height and on no ancestor establishing a scroll or clip context.
+   * Taking the header out of the scroll area entirely removes the whole class
+   * of problem instead of relying on that chain staying intact.
+   *
+   * dvh with a vh fallback, so mobile browser chrome cannot leave the bottom of
+   * the page unreachable.
+   */
+  .app-shell {
+    height: 100vh;
+    height: 100dvh;
+  }
+
   .modal-sheet {
     max-height: 100vh;
     max-height: 100dvh;

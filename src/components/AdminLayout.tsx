@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { useEffect, useRef, useState } from 'react'
+import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import Logo from './Logo'
 
@@ -36,7 +36,16 @@ function navClass({ isActive }: { isActive: boolean }) {
 export default function AdminLayout() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
+  const main = useRef<HTMLElement>(null)
   const [open, setOpen] = useState(false)
+
+  // <main> scrolls, not the window, so the browser's own scroll restoration
+  // does not apply: without this, opening a parish from halfway down the list
+  // lands you halfway down the parish page.
+  useEffect(() => {
+    main.current?.scrollTo({ top: 0 })
+  }, [location.pathname])
 
   // Close the drawer on Escape and stop the page behind it scrolling. Without
   // the lock, dragging the drawer scrolls the dashboard underneath it, which
@@ -104,11 +113,11 @@ export default function AdminLayout() {
   )
 
   return (
-    <div className="flex min-h-screen bg-navy-50">
-      {/* The desktop sidebar scrolls independently and stays put while the
-          page moves — six nav items plus the account block do not fit a short
-          laptop window otherwise. */}
-      <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col overflow-y-auto bg-navy-900 p-4 lg:flex">
+    // One viewport tall, and nothing here scrolls except <main>. That is what
+    // keeps the header still: it is outside the scrolling element rather than
+    // sticky inside it.
+    <div className="app-shell flex overflow-hidden bg-navy-50">
+      <aside className="hidden w-64 shrink-0 flex-col overflow-y-auto bg-navy-900 p-4 lg:flex">
         {sidebar}
       </aside>
 
@@ -126,10 +135,10 @@ export default function AdminLayout() {
         </div>
       )}
 
-      <div className="flex min-w-0 flex-1 flex-col">
-        {/* Sticky, or the only way back to another page after scrolling a long
-            dashboard is to scroll all the way up again. */}
-        <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-navy-100 bg-white/95 px-4 py-3 backdrop-blur lg:hidden">
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+        {/* shrink-0 so it keeps its height, and outside <main> so it is not part
+            of what scrolls. */}
+        <header className="z-30 flex shrink-0 items-center gap-3 border-b border-navy-100 bg-white px-4 py-3 lg:hidden">
           <button
             type="button"
             className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-navy-200 text-navy-700"
@@ -148,7 +157,11 @@ export default function AdminLayout() {
           <span className="font-semibold text-navy-900">Provincial admin</span>
         </header>
 
-        <main className="min-w-0 flex-1 p-4 sm:p-6 lg:p-8">
+        {/* The only scrolling element in the admin area. */}
+        <main
+          ref={main}
+          className="min-w-0 flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6 lg:p-8"
+        >
           <Outlet />
         </main>
       </div>

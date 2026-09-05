@@ -8,6 +8,13 @@
   }
   body {
     @apply bg-navy-50 text-navy-950 font-sans antialiased;
+    /*
+     * A long unbreakable run — an email address, a pasted Firebase error, a
+     * URL — is wider than a phone and pushes its container past the screen
+     * edge. `overflow-wrap` inherits, so this covers every card, table cell and
+     * alert at once, and only ever acts on words that would otherwise overflow.
+     */
+    overflow-wrap: break-word;
   }
 
   /*

@@ -264,7 +264,7 @@ export default function AdminsAdmin() {
               >
                 <div className="min-w-0">
                   <p className="flex flex-wrap items-center gap-2 font-medium text-navy-900">
-                    <span className="truncate">{row.email || row.uid}</span>
+                    <span className="min-w-0 truncate">{row.email || row.uid}</span>
                     <span
                       className={`badge ${
                         row.role === 'super'
@@ -325,7 +325,7 @@ export default function AdminsAdmin() {
               >
                 <div className="min-w-0">
                   <p className="flex flex-wrap items-center gap-2 font-medium text-navy-900">
-                    <span className="truncate">{row.email}</span>
+                    <span className="min-w-0 truncate">{row.email}</span>
                     <span className="badge bg-navy-100 text-navy-700">{LABEL[row.role]}</span>
                   </p>
                   <p className="mt-0.5 text-xs text-navy-500">

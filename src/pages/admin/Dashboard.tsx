@@ -502,7 +502,7 @@ export default function Dashboard() {
                     {outstanding.map((p) => (
                       <li
                         key={p.id}
-                        className="truncate rounded-lg border border-navy-100 px-3 py-2 text-sm"
+                        className="min-w-0 truncate rounded-lg border border-navy-100 px-3 py-2 text-sm"
                       >
                         <Link
                           to={`/admin/parishes/${p.id}`}

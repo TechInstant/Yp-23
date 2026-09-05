@@ -421,7 +421,7 @@ function MissingList({
             <li key={r.parishId} className="flex justify-between gap-2 text-sm">
               <Link
                 to={`/admin/parishes/${r.parishId}`}
-                className="truncate text-navy-800 hover:underline"
+                className="min-w-0 truncate text-navy-800 hover:underline"
               >
                 {r.parishName}
               </Link>

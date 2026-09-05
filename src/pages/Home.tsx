@@ -169,7 +169,7 @@ export default function Home() {
                 key={r.id}
                 className="flex items-center justify-between gap-2 rounded-lg border border-emerald-100 bg-emerald-50/60 px-3 py-2 text-sm"
               >
-                <span className="truncate font-medium text-navy-800" title={r.parishName}>
+                <span className="min-w-0 truncate font-medium text-navy-800" title={r.parishName}>
                   {r.parishName}
                 </span>
                 <span className="shrink-0 font-semibold tabular-nums text-emerald-700">

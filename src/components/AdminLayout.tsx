@@ -98,7 +98,7 @@ export default function AdminLayout() {
         ))}
       </nav>
       <div className="border-t border-white/10 pt-4">
-        <p className="truncate px-3 text-xs text-navy-300" title={user?.email ?? ''}>
+        <p className="min-w-0 truncate px-3 text-xs text-navy-300" title={user?.email ?? ''}>
           {user?.email}
         </p>
         <button

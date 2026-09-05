@@ -170,6 +170,16 @@ export default function AdminsAdmin() {
     }
   }
 
+  // The rules refuse the admin list to anyone but a super admin, so this page
+  // would render a permission error rather than a list. Say so plainly instead.
+  if (!isSuperAdmin) {
+    return (
+      <Alert tone="info" title="Super admins only">
+        Only a super admin can see who has access to the portal or change it.
+      </Alert>
+    )
+  }
+
   if (loading) return <Spinner label="Loading the admin list…" />
 
   return (
@@ -188,12 +198,6 @@ export default function AdminsAdmin() {
         </Alert>
       )}
       {message && <Alert tone={message.tone}>{message.text}</Alert>}
-
-      {!isSuperAdmin && (
-        <Alert tone="info" title="View only">
-          Only a super admin can invite or remove admins. You can see who has access.
-        </Alert>
-      )}
 
       {isSuperAdmin && (
         <form onSubmit={invite} className="card space-y-4 p-4 sm:p-6">

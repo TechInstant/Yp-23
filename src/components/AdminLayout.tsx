@@ -21,6 +21,7 @@ const NAV = [
     to: '/admin/admins',
     label: 'Admin access',
     icon: 'M12 3l7 4v5c0 4.4-3 8-7 9-4-1-7-4.6-7-9V7z',
+    superOnly: true,
   },
 ]
 
@@ -34,7 +35,7 @@ function navClass({ isActive }: { isActive: boolean }) {
 }
 
 export default function AdminLayout() {
-  const { user, logout } = useAuth()
+  const { user, logout, isSuperAdmin } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const main = useRef<HTMLElement>(null)
@@ -77,7 +78,7 @@ export default function AdminLayout() {
         </Link>
       </div>
       <nav className="flex flex-1 flex-col gap-1">
-        {NAV.map((item) => (
+        {NAV.filter((item) => !item.superOnly || isSuperAdmin).map((item) => (
           <NavLink
             key={item.to}
             to={item.to}

@@ -84,6 +84,26 @@ export function isSelectableSunday(iso: string, today = todayISO()): boolean {
 }
 
 /**
+ * Whether a parish may file right now: only on the Sunday itself.
+ *
+ * The province asked for returns on the day, not back-filled during the week,
+ * so the submitted date must be today's date — which can only be true on a
+ * Sunday inside the tracking window. firestore.rules enforces the same test, so
+ * this is a courtesy to the pastor rather than the actual control.
+ *
+ * Everything is UTC while Nigeria is UTC+1, so the window a pastor sees runs
+ * from 1am Sunday to just before 1am Monday, WAT. Services fall well inside it.
+ */
+export function isSubmissionDay(today = todayISO()): boolean {
+  return isTrackedSunday(today)
+}
+
+/** The next Sunday a parish will be able to file on, for the "come back on…" line. */
+export function nextSubmissionSunday(today = todayISO()): string | null {
+  return allSundays().find((d) => d >= today) ?? null
+}
+
+/**
  * The Sunday a form should open on: the most recent one that may actually be
  * reported. Empty string before the exercise begins — deliberately *not*
  * SEASON_START, because until 6 September 2026 has happened, defaulting to it

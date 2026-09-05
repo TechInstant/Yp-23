@@ -1,16 +1,16 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore'
-import SundayPicker from '../components/SundayPicker'
 import { Alert, Field, Spinner } from '../components/ui'
 import { useParishes } from '../hooks/useParishes'
 import { COLLECTIONS, db } from '../lib/firebase'
 import {
   formatSundayLong,
   hasStarted,
-  isSelectableSunday,
-  latestSelectableSunday,
+  isSubmissionDay,
+  nextSubmissionSunday,
   SEASON_START,
+  todayISO,
 } from '../lib/sundays'
 
 type Status =
@@ -30,7 +30,8 @@ export default function SubmitAttendance() {
   const [parishId, setParishId] = useState('')
   const [pastorName, setPastorName] = useState('')
   const [phone, setPhone] = useState('')
-  const [date, setDate] = useState(() => latestSelectableSunday())
+  // Fixed, not chosen: a return may only be filed on the Sunday it is for.
+  const date = todayISO()
   const [attendance, setAttendance] = useState('')
   const [note, setNote] = useState('')
 
@@ -39,6 +40,8 @@ export default function SubmitAttendance() {
   const [checking, setChecking] = useState(false)
 
   const started = hasStarted()
+  const canSubmit = isSubmissionDay()
+  const nextSunday = nextSubmissionSunday()
   const parish = active.find((p) => p.id === parishId) ?? null
 
   const options = useMemo(
@@ -87,14 +90,13 @@ export default function SubmitAttendance() {
       return
     }
 
-    // The calendar only offers valid Sundays, but the value could be stale if
-    // the form sat open across midnight on a Saturday.
-    if (!isSelectableSunday(date)) {
+    // The date is today's, but the page could have sat open past midnight —
+    // in which case it is no longer Sunday and the write would be rejected.
+    if (!isSubmissionDay()) {
       setStatus({
         kind: 'error',
-        message: date
-          ? `${formatSundayLong(date)} cannot be reported yet — pick a Sunday that has already passed.`
-          : 'Choose the Sunday this attendance is for.',
+        message:
+          'Returns can only be filed on the Sunday itself. Reload the page, or send your figure to the provincial admin.',
       })
       return
     }
@@ -169,11 +171,25 @@ export default function SubmitAttendance() {
         </p>
       </header>
 
-      {!started && (
+      {!started ? (
         <Alert tone="warning" title="Returns are not open yet">
           The exercise begins on <strong>{formatSundayLong(SEASON_START)}</strong>. You can fill
-          this form in from that Sunday onwards.
+          this form in on that Sunday.
         </Alert>
+      ) : (
+        !canSubmit && (
+          <Alert tone="warning" title="Returns are only filed on Sundays">
+            <p>
+              This form opens on the day of the service. Come back on{' '}
+              <strong>{nextSunday ? formatSundayLong(nextSunday) : 'the next Sunday'}</strong> and
+              submit your figure then.
+            </p>
+            <p className="mt-2">
+              If your parish missed a Sunday, the provincial admin can still record the figure for
+              you — send it to them.
+            </p>
+          </Alert>
+        )
       )}
 
       {status.kind === 'saved' && (
@@ -240,12 +256,10 @@ export default function SubmitAttendance() {
         </div>
 
         <div className="grid gap-5 sm:grid-cols-2">
-          <Field
-            label="Sunday"
-            required
-            hint="Only Sundays that have already happened can be chosen."
-          >
-            <SundayPicker value={date} onChange={setDate} />
+          <Field label="Sunday" hint="Returns are filed on the day of the service.">
+            <p className="input bg-navy-50 font-medium text-navy-800">
+              {canSubmit ? formatSundayLong(date) : 'Not open today'}
+            </p>
           </Field>
 
           <Field label="Number in attendance" required>
@@ -291,7 +305,9 @@ export default function SubmitAttendance() {
           <button
             type="submit"
             className="btn-primary w-full sm:w-auto"
-            disabled={status.kind === 'saving' || !parish || Boolean(existing) || !started}
+            disabled={
+              status.kind === 'saving' || !parish || Boolean(existing) || !started || !canSubmit
+            }
           >
             {status.kind === 'saving' ? 'Saving…' : 'Submit attendance'}
           </button>

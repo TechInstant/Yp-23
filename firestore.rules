@@ -67,15 +67,40 @@ service cloud.firestore {
     // Sunday of December 2029. Kept in sync with src/lib/sundays.ts.
     function isTrackedSunday(d) {
       return d is string
-        // Rules cannot compute a weekday, so a determined writer could still
-        // post a Tuesday inside the window. The charts only bucket real tracked
-        // Sundays, so such a row would be invisible there while still counting
-        // in the totals — analytics therefore filters to tracked Sundays too,
-        // keeping the two consistent. This regex at least rejects impossible
-        // dates like 2026-19-05 and 2026-09-39.
+        // The regex rejects impossible dates like 2026-19-05 and 2026-09-39.
+        // It cannot tell a Sunday from a Tuesday — isToday() below is what does
+        // that, by pinning the submitted date to the day of the request.
         && d.matches('^20(2[6-9])-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$')
         && d >= '2026-09-06'
         && d <= '2029-12-30';
+    }
+
+    function pad(n) {
+      return n < 10 ? '0' + string(n) : string(n);
+    }
+
+    /** Today's UTC date, as the same YYYY-MM-DD string the client writes. */
+    function todayString() {
+      return string(request.time.year())
+        + '-' + pad(request.time.month())
+        + '-' + pad(request.time.day());
+    }
+
+    /**
+     * Returns may only be filed on the Sunday they are for.
+     *
+     * Rules have no weekday function, so "must be a Sunday" cannot be tested
+     * directly. Requiring the submitted date to equal the date of the request
+     * achieves it exactly: the date is already constrained to the Sunday list
+     * by isTrackedSunday, so if it also equals today, today is that Sunday.
+     * Filing on Monday for yesterday now fails, which is what the province
+     * asked for.
+     *
+     * Admins are exempt, so a parish that phones its figure in during the week
+     * can still be recorded on its behalf.
+     */
+    function isToday(d) {
+      return d == todayString();
     }
 
     match /admins/{uid} {
@@ -86,7 +111,12 @@ service cloud.firestore {
       // permission to discover that fact. Every sign-in by a non-admin then
       // threw permission-denied, and because that throw happened before the
       // invitation lookup, an invitee could never redeem their invitation.
-      allow read: if isAdmin() || (isSignedIn() && uid == request.auth.uid);
+      // Only super admins can see who else has access. A plain admin can read
+      // exactly one document — their own — which is what AuthContext needs to
+      // discover its own role, and nothing more. Rules filter by permission,
+      // not by row: without the self clause a plain admin could not sign in at
+      // all, and without limiting the rest they could list every admin's email.
+      allow read: if isSuperAdmin() || (isSignedIn() && uid == request.auth.uid);
 
       /**
        * Self-claim against an invitation.
@@ -119,7 +149,9 @@ service cloud.firestore {
 
     match /adminInvites/{inviteId} {
       // An invitee may read and clear their own invitation; admins see them all.
-      allow read: if isAdmin() || (myEmail() != '' && inviteId == myEmail());
+      // Same reasoning: an invitee reads their own invitation to redeem it,
+      // super admins see the outstanding list, plain admins see neither.
+      allow read: if isSuperAdmin() || (myEmail() != '' && inviteId == myEmail());
 
       allow create, update: if isSuperAdmin()
                             && inviteId == incoming().email
@@ -215,8 +247,13 @@ service cloud.firestore {
       // able to see the province-wide chart.
       allow read: if true;
 
-      // Admins record returns phoned in by a parish, so they are exempt from
-      // the create-only guard below (source "admin" rather than "parish-form").
+      /**
+       * Who may write a return, and for which Sunday.
+       *
+       *   anyone   today's Sunday only, once, through the public form
+       *   admin    any tracked Sunday — back-filling a figure phoned in during
+       *            the week is routine provincial work
+       */
       allow create: if isAdmin() ||
                     (
                       recordId == incoming().parishId + '_' + incoming().date
@@ -226,6 +263,8 @@ service cloud.firestore {
                          ])
                       && exists(/databases/$(database)/documents/parishes/$(incoming().parishId))
                       && isTrackedSunday(incoming().date)
+                      // On the Sunday itself, and no other day.
+                      && isToday(incoming().date)
                       && incoming().pastorName is string
                       && incoming().pastorName.size() >= 2
                       && incoming().pastorName.size() <= 120

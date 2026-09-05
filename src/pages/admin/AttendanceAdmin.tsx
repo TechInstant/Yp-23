@@ -43,6 +43,7 @@ export default function AttendanceAdmin() {
 
   const total = filtered.reduce((s, r) => s + r.attendance, 0)
 
+
   async function saveEdit(value: number, note: string) {
     if (!editing) return
     // Number('') is 0, so clearing the box and pressing Save would store a
@@ -288,20 +289,20 @@ export default function AttendanceAdmin() {
               </div>
 
               <div className="grid grid-cols-2 gap-2 border-t border-navy-100 pt-3">
-                <button
-                  type="button"
-                  className="btn-ghost btn-sm"
-                  onClick={() => setEditing(r)}
-                >
-                  Edit
-                </button>
-                <button
-                  type="button"
-                  className="btn-danger btn-sm"
-                  onClick={() => void removeRecord(r)}
-                >
-                  Delete
-                </button>
+                  <button
+                    type="button"
+                    className="btn-ghost btn-sm"
+                    onClick={() => setEditing(r)}
+                  >
+                    Edit
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-danger btn-sm"
+                    onClick={() => void removeRecord(r)}
+                  >
+                    Delete
+                  </button>
               </div>
             </li>
           ))}
@@ -340,20 +341,20 @@ export default function AttendanceAdmin() {
                   </td>
                   <td className="td">
                     <div className="flex justify-end gap-1.5">
-                      <button
-                        type="button"
-                        className="btn-ghost btn-sm"
-                        onClick={() => setEditing(r)}
-                      >
-                        Edit
-                      </button>
-                      <button
-                        type="button"
-                        className="btn-danger btn-sm"
-                        onClick={() => void removeRecord(r)}
-                      >
-                        Delete
-                      </button>
+                        <button
+                          type="button"
+                          className="btn-ghost btn-sm"
+                          onClick={() => setEditing(r)}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          className="btn-danger btn-sm"
+                          onClick={() => void removeRecord(r)}
+                        >
+                          Delete
+                        </button>
                     </div>
                   </td>
                 </tr>
@@ -554,7 +555,7 @@ function AddModal({
           </select>
         </Field>
         <div className="grid gap-5 sm:grid-cols-2">
-          <Field label="Sunday" required>
+          <Field label="Sunday" required hint="Any Sunday that has passed.">
             <SundayPicker value={date} onChange={setDate} />
           </Field>
           <Field label="Number in attendance" required>

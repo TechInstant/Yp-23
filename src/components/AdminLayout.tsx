@@ -132,7 +132,7 @@ export default function AdminLayout() {
         <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-navy-100 bg-white/95 px-4 py-3 backdrop-blur lg:hidden">
           <button
             type="button"
-            className="rounded-lg border border-navy-200 p-2 text-navy-700"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-navy-200 text-navy-700"
             onClick={() => setOpen(true)}
             aria-label="Open menu"
           >

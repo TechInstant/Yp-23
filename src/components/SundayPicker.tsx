@@ -151,7 +151,7 @@ export default function SundayPicker({
           <div className="flex items-center justify-between">
             <button
               type="button"
-              className="rounded-lg p-1.5 text-navy-600 hover:bg-navy-50 disabled:opacity-30 disabled:hover:bg-transparent"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-navy-600 hover:bg-navy-50 disabled:opacity-30 disabled:hover:bg-transparent"
               onClick={() => step(-1)}
               disabled={!canGoBack}
               aria-label="Previous month"
@@ -165,7 +165,7 @@ export default function SundayPicker({
             </span>
             <button
               type="button"
-              className="rounded-lg p-1.5 text-navy-600 hover:bg-navy-50 disabled:opacity-30 disabled:hover:bg-transparent"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-navy-600 hover:bg-navy-50 disabled:opacity-30 disabled:hover:bg-transparent"
               onClick={() => step(1)}
               disabled={!canGoForward}
               aria-label="Next month"

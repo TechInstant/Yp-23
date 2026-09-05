@@ -255,7 +255,9 @@ export default function CompareSundays() {
               <label className="text-sm text-navy-600">
                 Sort by{' '}
                 <select
-                  className="rounded-lg border border-navy-200 bg-white px-2 py-1 text-sm"
+                  // No text-sm: under 16px iOS zooms the page on focus, and a
+                  // Tailwind utility would beat the base rule that prevents it.
+                  className="min-h-[40px] rounded-lg border border-navy-200 bg-white px-2 py-1"
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value as SortKey)}
                 >

@@ -40,7 +40,7 @@ export default function Layout() {
 
           <button
             type="button"
-            className="rounded-lg border border-navy-200 p-2 text-navy-700 md:hidden"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-navy-200 text-navy-700 md:hidden"
             onClick={() => setOpen((v) => !v)}
             aria-label="Toggle navigation"
             aria-expanded={open}

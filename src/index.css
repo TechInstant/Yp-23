@@ -11,14 +11,25 @@
   }
 
   /*
-   * Last-resort guard against a stray wide element dragging the whole page
-   * sideways on a phone. `clip` rather than `hidden`: `hidden` turns the
-   * element into a scroll container, which silently breaks `position: sticky`
-   * on the headers inside it.
+   * Deliberately NO overflow-x guard on html/body.
+   *
+   * `hidden` makes the element a scroll container and kills `position: sticky`
+   * on every header inside it; `clip` establishes a clip context that engines
+   * treat inconsistently with sticky descendants. A sideways-scrolling page is
+   * a bug in one component — it gets fixed there, not masked here at the cost
+   * of the sticky admin header.
    */
-  html,
-  body {
-    overflow-x: clip;
+
+  /*
+   * iOS Safari zooms the page whenever a focused field is under 16px. Every
+   * control that takes typing is held at 16px so tapping a form never yanks
+   * the layout sideways; small text elsewhere is fine because it is not
+   * focusable.
+   */
+  input,
+  select,
+  textarea {
+    font-size: 16px;
   }
   /* Chrome/Safari draw spinners on number inputs that pastors fat-finger on
      mobile; the attendance box is typed, not stepped. */
@@ -47,10 +58,17 @@
            focus:ring-2 focus:ring-navy-500/20 disabled:bg-navy-50 disabled:text-navy-400;
   }
 
+  /*
+   * min-h-11 (44px) on phones is the smallest reliable touch target. The
+   * Edit / Archive / Delete buttons in the admin tables are btn-sm, which is
+   * about 28px tall — fine with a mouse, a coin-toss with a thumb. Desktop
+   * keeps the compact height.
+   */
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm
-           font-semibold transition focus:outline-none focus:ring-2 focus:ring-offset-2
-           disabled:cursor-not-allowed disabled:opacity-60;
+    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-4 py-2.5
+           text-sm font-semibold transition focus:outline-none focus:ring-2
+           focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60
+           sm:min-h-0;
   }
   .btn-primary {
     @apply btn bg-navy-900 text-white hover:bg-navy-800 focus:ring-navy-500;

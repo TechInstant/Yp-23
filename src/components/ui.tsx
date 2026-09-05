@@ -181,7 +181,7 @@ export function Modal({
           <button
             type="button"
             onClick={onClose}
-            className="-mr-1 shrink-0 rounded-lg p-2 text-navy-400 hover:bg-navy-50 hover:text-navy-700"
+            className="-mr-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-navy-400 hover:bg-navy-50 hover:text-navy-700"
             aria-label="Close"
           >
             <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden>

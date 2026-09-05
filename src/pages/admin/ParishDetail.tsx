@@ -18,6 +18,7 @@ import { useParishes } from '../../hooks/useParishes'
 import { AXIS_TICK, CHART, TOOLTIP_STYLE } from '../../lib/chartTheme'
 import { downloadCsv, toCsv } from '../../lib/csv'
 import { COLLECTIONS, db } from '../../lib/firebase'
+import { whatsappNumber } from '../../lib/phone'
 import { formatAxis, formatSundayLong } from '../../lib/sundays'
 import type { AttendanceRecord } from '../../types'
 
@@ -105,14 +106,24 @@ export default function ParishDetail() {
           {pastorName || <span className="italic text-navy-400">No pastor on record</span>}
         </p>
         {phones[parish.id] && (
-          <p className="mt-1 text-sm">
+          <div className="mt-1.5 flex flex-wrap items-center gap-2 text-sm">
             <a
               href={`tel:${phones[parish.id]}`}
               className="font-medium text-navy-800 hover:underline"
             >
-              {phones[parish.id]}
+              📞 {phones[parish.id]}
             </a>
-          </p>
+            {whatsappNumber(phones[parish.id]) && (
+              <a
+                href={`https://wa.me/${whatsappNumber(phones[parish.id])}`}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1 rounded bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-100"
+              >
+                WhatsApp
+              </a>
+            )}
+          </div>
         )}
 
         {/* Jump straight to another church rather than going back through the

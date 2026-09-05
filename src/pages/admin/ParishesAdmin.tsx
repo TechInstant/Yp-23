@@ -16,6 +16,7 @@ import { useParishContacts } from '../../hooks/useParishContacts'
 import { useParishes } from '../../hooks/useParishes'
 import { downloadCsv, parseCsv, toCsv } from '../../lib/csv'
 import { COLLECTIONS, db } from '../../lib/firebase'
+import { whatsappNumber } from '../../lib/phone'
 import type { Parish, ParishStatus } from '../../types'
 
 interface Draft {
@@ -419,12 +420,24 @@ export default function ParishesAdmin() {
                     )}
                   </p>
                   {phones[p.id] ? (
-                    <a
-                      href={`tel:${phones[p.id]}`}
-                      className="mt-1 inline-flex items-center gap-1 font-medium text-navy-800 hover:underline"
-                    >
-                      📞 {phones[p.id]}
-                    </a>
+                    <div className="mt-1 flex flex-wrap items-center gap-2">
+                      <a
+                        href={`tel:${phones[p.id]}`}
+                        className="inline-flex items-center gap-1 font-medium text-navy-800 hover:underline"
+                      >
+                        📞 {phones[p.id]}
+                      </a>
+                      {whatsappNumber(phones[p.id]) && (
+                        <a
+                          href={`https://wa.me/${whatsappNumber(phones[p.id])}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1 rounded bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-100"
+                        >
+                          WhatsApp
+                        </a>
+                      )}
+                    </div>
                   ) : (
                     <p className="mt-1 text-xs text-navy-400">No phone on file</p>
                   )}
@@ -480,9 +493,21 @@ export default function ParishesAdmin() {
                   </td>
                   <td className="td whitespace-nowrap">
                     {phones[p.id] ? (
-                      <a href={`tel:${phones[p.id]}`} className="text-navy-800 hover:underline">
-                        {phones[p.id]}
-                      </a>
+                      <div className="flex items-center gap-2">
+                        <a href={`tel:${phones[p.id]}`} className="text-navy-800 hover:underline">
+                          {phones[p.id]}
+                        </a>
+                        {whatsappNumber(phones[p.id]) && (
+                          <a
+                            href={`https://wa.me/${whatsappNumber(phones[p.id])}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="rounded bg-emerald-50 px-1.5 py-0.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-100"
+                          >
+                            WhatsApp
+                          </a>
+                        )}
+                      </div>
                     ) : (
                       <span className="text-navy-300">—</span>
                     )}

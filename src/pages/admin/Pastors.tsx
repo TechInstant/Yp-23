@@ -5,24 +5,8 @@ import { useAttendance } from '../../hooks/useAttendance'
 import { useParishContacts } from '../../hooks/useParishContacts'
 import { useParishes } from '../../hooks/useParishes'
 import { downloadCsv, toCsv } from '../../lib/csv'
+import { whatsappNumber } from '../../lib/phone'
 import { currentReportingSunday, formatSunday, formatSundayLong, resolveRange } from '../../lib/sundays'
-
-/**
- * The contact sheet: who to ring, and who needs ringing.
- *
- * Sorted so the parishes that have not reported for the current Sunday come
- * first — the point of the page is chasing missing returns, not admiring a
- * complete list.
- */
-
-/** 07024444000 -> 2347024444000, which is what wa.me expects. */
-function whatsappNumber(phone: string): string | null {
-  const digits = phone.replace(/\D/g, '')
-  if (digits.startsWith('234') && digits.length >= 13) return digits
-  if (digits.startsWith('0') && digits.length === 11) return '234' + digits.slice(1)
-  if (digits.length === 10) return '234' + digits
-  return null
-}
 
 export default function Pastors() {
   const { parishes, active, loading } = useParishes()
@@ -161,7 +145,7 @@ export default function Pastors() {
       ) : (
         <ul className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {rows.map((row) => {
-            const wa = row.phone ? whatsappNumber(row.phone) : null
+            const wa = whatsappNumber(row.phone)
             return (
               <li key={row.parish.id} className="card flex flex-col justify-between gap-3 p-4">
                 <div>
@@ -178,6 +162,11 @@ export default function Pastors() {
                         <span className="italic text-navy-400">No pastor on record</span>
                       )}
                     </p>
+                    {row.phone && (
+                      <p className="mt-1 text-xs font-medium text-navy-700">
+                        {row.phone}
+                      </p>
+                    )}
                   </div>
 
                   <div className="mt-2.5 flex flex-wrap items-center gap-2">
@@ -204,7 +193,7 @@ export default function Pastors() {
                         href={`https://wa.me/${wa}`}
                         target="_blank"
                         rel="noreferrer"
-                        className="btn-ghost btn-sm flex-1 text-center"
+                        className="btn-ghost btn-sm flex-1 text-center font-medium text-emerald-700 hover:bg-emerald-50"
                       >
                         WhatsApp
                       </a>

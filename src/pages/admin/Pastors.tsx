@@ -100,17 +100,17 @@ export default function Pastors() {
 
   return (
     <div className="space-y-6">
-      <header className="flex flex-wrap items-end justify-between gap-4">
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-navy-900">Pastors &amp; contacts</h1>
           <p className="mt-1 text-sm text-navy-600">Reach out about {formatSundayLong(sunday)}</p>
         </div>
-        <button type="button" className="btn-ghost btn-sm" onClick={exportContacts}>
+        <button type="button" className="btn-ghost btn-sm w-full sm:w-auto" onClick={exportContacts}>
           Export contacts CSV
         </button>
       </header>
 
-      <section className="grid gap-4 sm:grid-cols-3">
+      <section className="grid gap-3 sm:grid-cols-3 sm:gap-4">
         <StatTile
           label="Yet to report"
           value={String(missing)}
@@ -163,49 +163,53 @@ export default function Pastors() {
           {rows.map((row) => {
             const wa = row.phone ? whatsappNumber(row.phone) : null
             return (
-              <li key={row.parish.id} className="card flex flex-col gap-3 p-4">
-                <div className="min-w-0">
-                  <Link
-                    to={`/admin/parishes/${row.parish.id}`}
-                    className="block truncate font-semibold text-navy-900 hover:underline"
-                    title={row.parish.name}
-                  >
-                    {row.parish.name}
-                  </Link>
-                  <p className="mt-0.5 truncate text-sm text-navy-600">
-                    {row.pastorName || (
-                      <span className="italic text-navy-400">No pastor on record</span>
-                    )}
-                  </p>
-                </div>
+              <li key={row.parish.id} className="card flex flex-col justify-between gap-3 p-4">
+                <div>
+                  <div className="min-w-0">
+                    <Link
+                      to={`/admin/parishes/${row.parish.id}`}
+                      className="block truncate font-semibold text-navy-900 hover:underline"
+                      title={row.parish.name}
+                    >
+                      {row.parish.name}
+                    </Link>
+                    <p className="mt-0.5 truncate text-sm text-navy-600">
+                      {row.pastorName || (
+                        <span className="italic text-navy-400">No pastor on record</span>
+                      )}
+                    </p>
+                  </div>
 
-                <div className="flex flex-wrap items-center gap-2">
-                  <span
-                    className={`badge ${
-                      row.reported ? 'bg-emerald-100 text-emerald-800' : 'bg-gold-100 text-gold-800'
-                    }`}
-                  >
-                    {row.reported ? 'Reported' : 'Not yet'}
-                  </span>
-                  <span className="text-xs text-navy-500">
-                    {row.lastSeen ? `last ${formatSunday(row.lastSeen)}` : 'never reported'}
-                  </span>
+                  <div className="mt-2.5 flex flex-wrap items-center gap-2">
+                    <span
+                      className={`badge ${
+                        row.reported ? 'bg-emerald-100 text-emerald-800' : 'bg-gold-100 text-gold-800'
+                      }`}
+                    >
+                      {row.reported ? 'Reported' : 'Not yet'}
+                    </span>
+                    <span className="text-xs text-navy-500">
+                      {row.lastSeen ? `last ${formatSunday(row.lastSeen)}` : 'never reported'}
+                    </span>
+                  </div>
                 </div>
 
                 {row.phone ? (
-                  <div className="flex flex-wrap gap-2 border-t border-navy-100 pt-3">
-                    <a href={`tel:${row.phone}`} className="btn-ghost btn-sm">
-                      Call {row.phone}
+                  <div className="grid grid-cols-2 gap-2 border-t border-navy-100 pt-3">
+                    <a href={`tel:${row.phone}`} className="btn-ghost btn-sm flex-1 text-center">
+                      Call
                     </a>
-                    {wa && (
+                    {wa ? (
                       <a
                         href={`https://wa.me/${wa}`}
                         target="_blank"
                         rel="noreferrer"
-                        className="btn-ghost btn-sm"
+                        className="btn-ghost btn-sm flex-1 text-center"
                       >
                         WhatsApp
                       </a>
+                    ) : (
+                      <span />
                     )}
                   </div>
                 ) : (

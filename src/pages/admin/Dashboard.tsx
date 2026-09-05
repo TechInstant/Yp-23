@@ -134,7 +134,7 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-8">
-      <header className="flex flex-wrap items-end justify-between gap-4">
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-navy-900">Provincial dashboard</h1>
           <p className="mt-1 text-sm text-navy-600">
@@ -143,35 +143,37 @@ export default function Dashboard() {
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex max-w-full shrink-0 overflow-x-auto rounded-lg border border-navy-200 bg-white p-1">
-            {(
-              [
-                ['sundays', 'By Sunday'],
-                ['remittance', 'By remittance'],
-              ] as const
-            ).map(([key, label]) => (
-              <button
-                key={key}
-                type="button"
-                onClick={() => setView(key)}
-                className={`rounded-md px-3 py-1.5 text-xs font-semibold transition ${
-                  view === key ? 'bg-navy-900 text-white' : 'text-navy-600 hover:bg-navy-50'
-                }`}
-              >
-                {label}
-              </button>
-            ))}
+        <div className="flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:items-center">
+          <div className="flex items-center gap-2">
+            <div className="flex shrink-0 rounded-lg border border-navy-200 bg-white p-1">
+              {(
+                [
+                  ['sundays', 'By Sunday'],
+                  ['remittance', 'By remittance'],
+                ] as const
+              ).map(([key, label]) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setView(key)}
+                  className={`rounded-md px-3 py-1.5 text-xs font-semibold transition ${
+                    view === key ? 'bg-navy-900 text-white shadow-sm' : 'text-navy-600 hover:bg-navy-50'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
           {view === 'sundays' && (
-            <div className="flex max-w-full overflow-x-auto rounded-lg border border-navy-200 bg-white p-1">
+            <div className="no-scrollbar flex w-full max-w-full overflow-x-auto rounded-lg border border-navy-200 bg-white p-1 sm:w-auto">
               {RANGE_PRESETS.map((p) => (
                 <button
                   key={p.key}
                   type="button"
                   onClick={() => setPreset(p.key)}
                   className={`shrink-0 whitespace-nowrap rounded-md px-3 py-1.5 text-xs font-semibold transition ${
-                    preset === p.key ? 'bg-navy-900 text-white' : 'text-navy-600 hover:bg-navy-50'
+                    preset === p.key ? 'bg-navy-900 text-white shadow-sm' : 'text-navy-600 hover:bg-navy-50'
                   }`}
                 >
                   {p.label}
@@ -179,7 +181,7 @@ export default function Dashboard() {
               ))}
             </div>
           )}
-          <button type="button" className="btn-ghost btn-sm" onClick={exportGrowth}>
+          <button type="button" className="btn-ghost btn-sm w-full sm:w-auto" onClick={exportGrowth}>
             Export growth CSV
           </button>
         </div>
@@ -774,7 +776,7 @@ function Standings({ rows }: { rows: ParishGrowth[] }) {
 
   return (
     <>
-      <div className="mt-4 flex max-w-full overflow-x-auto rounded-lg border border-navy-200 bg-white p-1">
+      <div className="no-scrollbar mt-4 flex w-full max-w-full overflow-x-auto rounded-lg border border-navy-200 bg-white p-1 sm:w-auto">
         {RANK_OPTIONS.map((o) => (
           <button
             key={o.key}
@@ -782,7 +784,7 @@ function Standings({ rows }: { rows: ParishGrowth[] }) {
             onClick={() => setRankBy(o.key)}
             title={o.hint}
             className={`shrink-0 whitespace-nowrap rounded-md px-3 py-1.5 text-xs font-semibold transition ${
-              rankBy === o.key ? 'bg-navy-900 text-white' : 'text-navy-600 hover:bg-navy-50'
+              rankBy === o.key ? 'bg-navy-900 text-white shadow-sm' : 'text-navy-600 hover:bg-navy-50'
             }`}
           >
             {o.label}

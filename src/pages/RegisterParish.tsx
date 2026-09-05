@@ -247,7 +247,7 @@ export default function RegisterParish() {
         <div className="border-t border-navy-100 pt-5">
           <button
             type="submit"
-            className="btn-primary"
+            className="btn-primary w-full sm:w-auto"
             disabled={saving || (mode === 'confirm' && alreadyConfirmed)}
           >
             {saving ? 'Saving…' : mode === 'confirm' ? 'Confirm this parish' : 'Submit for approval'}

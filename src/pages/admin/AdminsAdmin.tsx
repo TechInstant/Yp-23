@@ -196,7 +196,7 @@ export default function AdminsAdmin() {
       )}
 
       {isSuperAdmin && (
-        <form onSubmit={invite} className="card space-y-4 p-5 sm:p-6">
+        <form onSubmit={invite} className="card space-y-4 p-4 sm:p-6">
           <h2 className="text-lg font-semibold text-navy-900">Invite an admin</h2>
           <div className="grid gap-4 sm:grid-cols-[1fr_auto_auto] sm:items-end">
             <Field label="Email address" required>
@@ -219,7 +219,7 @@ export default function AdminsAdmin() {
                 <option value="super">Super admin</option>
               </select>
             </Field>
-            <button type="submit" className="btn-primary sm:mb-0" disabled={busy}>
+            <button type="submit" className="btn-primary w-full sm:w-auto" disabled={busy}>
               {busy ? 'Creating…' : 'Create invite'}
             </button>
           </div>
@@ -432,10 +432,10 @@ function ShareInvite({ email }: { email: string }) {
 
   return (
     <div className="space-y-2">
-      <div className="flex flex-wrap gap-2">
+      <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
         <button
           type="button"
-          className="btn-gold btn-sm"
+          className="btn-gold btn-sm col-span-2 sm:col-span-1"
           onClick={() => void emailIt()}
           disabled={sending}
         >
@@ -445,7 +445,7 @@ function ShareInvite({ email }: { email: string }) {
           {copied ? 'Copied' : 'Copy message'}
         </button>
         <a
-          className="btn-ghost btn-sm"
+          className="btn-ghost btn-sm text-center"
           href={`https://wa.me/?text=${encodeURIComponent(inviteMessage(email))}`}
           target="_blank"
           rel="noreferrer"

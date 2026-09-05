@@ -174,38 +174,47 @@ export default function AttendanceAdmin() {
 
   return (
     <div className="space-y-6">
-      <header className="flex flex-wrap items-end justify-between gap-4">
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-navy-900">Attendance returns</h1>
           <p className="mt-1 text-sm text-navy-600">
             {filtered.length} records · {total.toLocaleString()} people counted
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex max-w-full overflow-x-auto rounded-lg border border-navy-200 bg-white p-1">
+        <div className="flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:items-center">
+          <div className="no-scrollbar flex w-full max-w-full overflow-x-auto rounded-lg border border-navy-200 bg-white p-1 sm:w-auto">
             {RANGE_PRESETS.map((p) => (
               <button
                 key={p.key}
                 type="button"
                 onClick={() => setPreset(p.key)}
                 className={`shrink-0 whitespace-nowrap rounded-md px-3 py-1.5 text-xs font-semibold transition ${
-                  preset === p.key ? 'bg-navy-900 text-white' : 'text-navy-600 hover:bg-navy-50'
+                  preset === p.key ? 'bg-navy-900 text-white shadow-sm' : 'text-navy-600 hover:bg-navy-50'
                 }`}
               >
                 {p.label}
               </button>
             ))}
           </div>
-          <button type="button" className="btn-ghost btn-sm" onClick={exportCsv}>
-            Export CSV
-          </button>
-          <button
-            type="button"
-            className="btn-ghost btn-sm"
-            onClick={() => fileInput.current?.click()}
-          >
-            Import CSV
-          </button>
+          <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
+            <button type="button" className="btn-ghost btn-sm" onClick={exportCsv}>
+              Export CSV
+            </button>
+            <button
+              type="button"
+              className="btn-ghost btn-sm"
+              onClick={() => fileInput.current?.click()}
+            >
+              Import CSV
+            </button>
+            <button
+              type="button"
+              className="btn-primary btn-sm col-span-2 sm:col-span-1"
+              onClick={() => setAdding(true)}
+            >
+              + Record a return
+            </button>
+          </div>
           <input
             ref={fileInput}
             type="file"
@@ -213,9 +222,6 @@ export default function AttendanceAdmin() {
             className="hidden"
             onChange={handleImport}
           />
-          <button type="button" className="btn-primary btn-sm" onClick={() => setAdding(true)}>
-            + Record a return
-          </button>
         </div>
       </header>
 
@@ -233,7 +239,14 @@ export default function AttendanceAdmin() {
       {loading ? (
         <Spinner label="Loading returns…" />
       ) : filtered.length === 0 ? (
-        <EmptyState title="No returns in this range">
+        <EmptyState
+          title="No returns in this range"
+          action={
+            <button type="button" className="btn-primary btn-sm" onClick={() => setAdding(true)}>
+              + Record a return now
+            </button>
+          }
+        >
           Widen the date range, or record one on behalf of a parish that reported by phone.
         </EmptyState>
       ) : (
@@ -245,40 +258,46 @@ export default function AttendanceAdmin() {
           Phones get the same records as stacked cards instead; the table
           returns at sm, where there is room for it.
         */}
-        <ul className="space-y-3 sm:hidden">
+        <ul className="grid gap-3 sm:hidden">
           {filtered.map((r) => (
-            <li key={r.id} className="card space-y-3 p-4">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <Link
-                    to={`/admin/parishes/${r.parishId}`}
-                    className="block font-semibold text-navy-900 hover:underline"
-                  >
-                    {r.parishName}
-                  </Link>
-                  <p className="mt-0.5 text-sm text-navy-500">{formatSundayLong(r.date)}</p>
+            <li key={r.id} className="card flex flex-col justify-between gap-3 p-4">
+              <div>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <Link
+                      to={`/admin/parishes/${r.parishId}`}
+                      className="block font-semibold text-navy-900 hover:underline"
+                    >
+                      {r.parishName}
+                    </Link>
+                    <p className="mt-0.5 text-xs text-navy-500">{formatSundayLong(r.date)}</p>
+                  </div>
+                  <span className="shrink-0 text-xl font-bold tabular-nums text-navy-900">
+                    {r.attendance.toLocaleString()}
+                  </span>
                 </div>
-                <span className="shrink-0 text-2xl font-bold tabular-nums text-navy-900">
-                  {r.attendance.toLocaleString()}
-                </span>
+
+                <p className="mt-2 text-sm text-navy-600">
+                  Filed by <span className="font-medium text-navy-800">{r.pastorName || 'unknown'}</span>
+                </p>
+                {r.note && (
+                  <p className="mt-1.5 rounded-md bg-navy-50 px-2.5 py-1.5 text-xs text-navy-700">
+                    {r.note}
+                  </p>
+                )}
               </div>
 
-              <p className="text-sm text-navy-600">
-                Filed by {r.pastorName || <span className="italic text-navy-400">unknown</span>}
-              </p>
-              {r.note && <p className="text-sm italic text-navy-500">{r.note}</p>}
-
-              <div className="flex gap-2 border-t border-navy-100 pt-3">
+              <div className="grid grid-cols-2 gap-2 border-t border-navy-100 pt-3">
                 <button
                   type="button"
-                  className="btn-ghost btn-sm flex-1"
+                  className="btn-ghost btn-sm"
                   onClick={() => setEditing(r)}
                 >
                   Edit
                 </button>
                 <button
                   type="button"
-                  className="btn-danger btn-sm flex-1"
+                  className="btn-danger btn-sm"
                   onClick={() => void removeRecord(r)}
                 >
                   Delete

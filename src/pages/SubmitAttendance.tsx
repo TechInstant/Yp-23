@@ -287,15 +287,15 @@ export default function SubmitAttendance() {
           />
         </Field>
 
-        <div className="flex flex-wrap items-center gap-3 border-t border-navy-100 pt-5">
+        <div className="flex flex-col gap-3 border-t border-navy-100 pt-5 sm:flex-row sm:items-center sm:justify-between">
           <button
             type="submit"
-            className="btn-primary"
+            className="btn-primary w-full sm:w-auto"
             disabled={status.kind === 'saving' || !parish || Boolean(existing) || !started}
           >
             {status.kind === 'saving' ? 'Saving…' : 'Submit attendance'}
           </button>
-          <span className="text-sm text-navy-500">
+          <span className="text-center text-sm text-navy-500 sm:text-left">
             Parish not listed?{' '}
             <Link to="/register" className="font-medium text-navy-800 underline">
               Register it first

@@ -60,10 +60,10 @@ export function StatTile({
           : 'text-navy-400'
 
   return (
-    <div className="card p-5">
-      <p className="text-xs font-semibold uppercase tracking-wide text-navy-500">{label}</p>
-      <p className="mt-2 text-3xl font-bold tabular-nums text-navy-900">{value}</p>
-      <div className="mt-1 flex items-center gap-2 text-xs">
+    <div className="card p-4 sm:p-5">
+      <p className="text-[11px] font-semibold uppercase tracking-wide text-navy-500 sm:text-xs">{label}</p>
+      <p className="mt-1.5 text-2xl font-bold tabular-nums text-navy-900 sm:mt-2 sm:text-3xl">{value}</p>
+      <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs sm:gap-2">
         {trend !== null && trend !== undefined && (
           <span className={`font-semibold tabular-nums ${tone}`}>
             {trend > 0 ? '▲' : trend < 0 ? '▼' : '■'} {Math.abs(trend).toFixed(1)}%
@@ -85,10 +85,10 @@ export function EmptyState({
   action?: ReactNode
 }) {
   return (
-    <div className="card flex flex-col items-center gap-3 px-6 py-14 text-center">
+    <div className="card flex flex-col items-center gap-2.5 px-5 py-8 text-center sm:gap-3 sm:px-6 sm:py-12">
       <p className="text-base font-semibold text-navy-900">{title}</p>
       {children && <p className="max-w-md text-sm text-navy-500">{children}</p>}
-      {action}
+      {action && <div className="mt-2">{action}</div>}
     </div>
   )
 }

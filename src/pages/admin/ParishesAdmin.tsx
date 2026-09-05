@@ -306,7 +306,7 @@ export default function ParishesAdmin() {
 
   return (
     <div className="space-y-6">
-      <header className="flex flex-wrap items-end justify-between gap-4">
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-navy-900">Parishes</h1>
           <p className="mt-1 text-sm text-navy-600">
@@ -325,11 +325,11 @@ export default function ParishesAdmin() {
             )}
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
           {parishes.length < DIRECTORY_COUNT && (
             <button
               type="button"
-              className="btn-gold btn-sm"
+              className="btn-gold btn-sm col-span-2 sm:col-span-1"
               onClick={() => void loadDirectory()}
               disabled={saving}
             >
@@ -353,7 +353,7 @@ export default function ParishesAdmin() {
             className="hidden"
             onChange={handleImport}
           />
-          <button type="button" className="btn-primary btn-sm" onClick={openCreate}>
+          <button type="button" className="btn-primary btn-sm col-span-2 sm:col-span-1" onClick={openCreate}>
             + Add parish
           </button>
         </div>
@@ -361,7 +361,7 @@ export default function ParishesAdmin() {
 
       {message && <Alert tone={message.tone}>{message.text}</Alert>}
 
-      <div className="flex flex-col gap-3 sm:flex-row">
+      <div className="grid gap-3 sm:flex sm:items-center">
         <input
           className="input sm:max-w-sm"
           type="search"
@@ -382,50 +382,59 @@ export default function ParishesAdmin() {
       </div>
 
       {filtered.length === 0 ? (
-        <EmptyState title="No parish matches those filters">
+        <EmptyState
+          title="No parish matches those filters"
+          action={
+            <button type="button" className="btn-primary btn-sm" onClick={openCreate}>
+              + Add new parish
+            </button>
+          }
+        >
           Clear the search, or add the parish if it is genuinely missing.
         </EmptyState>
       ) : (
         <>
         {/* Same reasoning as the attendance list: four action buttons at the
             right edge of a 700px table are off-screen on a phone. */}
-        <ul className="space-y-3 sm:hidden">
+        <ul className="grid gap-3 sm:hidden">
           {filtered.map((p) => (
-            <li key={p.id} className="card space-y-3 p-4">
-              <div className="flex items-start justify-between gap-3">
-                <Link
-                  to={`/admin/parishes/${p.id}`}
-                  className="min-w-0 font-semibold text-navy-900 hover:underline"
-                >
-                  {p.name}
-                </Link>
-                <span className="shrink-0">
-                  <StatusBadge status={p.status} />
-                </span>
-              </div>
-
-              <div className="text-sm">
-                <p className="text-navy-600">
-                  {contacts[p.id]?.pastorName || p.pastorName || (
-                    <span className="italic text-navy-300">Not confirmed</span>
-                  )}
-                </p>
-                {phones[p.id] ? (
-                  <a
-                    href={`tel:${phones[p.id]}`}
-                    className="mt-0.5 inline-block font-medium text-navy-800 hover:underline"
+            <li key={p.id} className="card flex flex-col justify-between gap-3 p-4">
+              <div>
+                <div className="flex items-start justify-between gap-3">
+                  <Link
+                    to={`/admin/parishes/${p.id}`}
+                    className="min-w-0 font-semibold text-navy-900 hover:underline"
                   >
-                    {phones[p.id]}
-                  </a>
-                ) : (
-                  <p className="mt-0.5 text-navy-300">No number on file</p>
-                )}
+                    {p.name}
+                  </Link>
+                  <span className="shrink-0">
+                    <StatusBadge status={p.status} />
+                  </span>
+                </div>
+
+                <div className="mt-2 text-sm">
+                  <p className="text-navy-600">
+                    {contacts[p.id]?.pastorName || p.pastorName || (
+                      <span className="italic text-navy-400">Not confirmed</span>
+                    )}
+                  </p>
+                  {phones[p.id] ? (
+                    <a
+                      href={`tel:${phones[p.id]}`}
+                      className="mt-1 inline-flex items-center gap-1 font-medium text-navy-800 hover:underline"
+                    >
+                      📞 {phones[p.id]}
+                    </a>
+                  ) : (
+                    <p className="mt-1 text-xs text-navy-400">No phone on file</p>
+                  )}
+                </div>
               </div>
 
-              <div className="flex flex-wrap gap-2 border-t border-navy-100 pt-3">
+              <div className="grid grid-cols-2 gap-2 border-t border-navy-100 pt-3">
                 {p.status === 'pending' && (
-                  <button type="button" className="btn-gold btn-sm" onClick={() => void approve(p)}>
-                    Approve
+                  <button type="button" className="btn-gold btn-sm col-span-2" onClick={() => void approve(p)}>
+                    Approve parish
                   </button>
                 )}
                 <button type="button" className="btn-ghost btn-sm" onClick={() => openEdit(p)}>
@@ -434,7 +443,7 @@ export default function ParishesAdmin() {
                 <button type="button" className="btn-ghost btn-sm" onClick={() => void archive(p)}>
                   {p.status === 'archived' ? 'Restore' : 'Archive'}
                 </button>
-                <button type="button" className="btn-danger btn-sm" onClick={() => void remove(p)}>
+                <button type="button" className="btn-danger btn-sm col-span-2" onClick={() => void remove(p)}>
                   Delete
                 </button>
               </div>

@@ -162,19 +162,19 @@ export default function CompareSundays() {
 
   return (
     <div className="space-y-6">
-      <header className="flex flex-wrap items-end justify-between gap-4">
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-navy-900">Compare two Sundays</h1>
           <p className="mt-1 text-sm text-navy-600">
             Pick any two Sundays to see what each church did between them.
           </p>
         </div>
-        <button type="button" className="btn-ghost btn-sm" onClick={exportCsv}>
+        <button type="button" className="btn-ghost btn-sm w-full sm:w-auto" onClick={exportCsv}>
           Export CSV
         </button>
       </header>
 
-      <section className="card grid gap-4 p-5 sm:grid-cols-2 sm:p-6">
+      <section className="card grid gap-4 p-4 sm:grid-cols-2 sm:p-6">
         <SundaySelect
           label="Earlier Sunday"
           value={earlier}
@@ -200,7 +200,7 @@ export default function CompareSundays() {
         </EmptyState>
       ) : (
         <>
-          <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <section className="grid gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-4">
             <StatTile
               label={formatSundayLong(earlier)}
               value={totals.earlierTotal.toLocaleString()}
@@ -247,17 +247,17 @@ export default function CompareSundays() {
             </Alert>
           )}
 
-          <section className="card p-5 sm:p-6">
-            <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <section className="card p-4 sm:p-6">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-baseline sm:justify-between">
               <h2 className="text-lg font-semibold text-navy-900">
                 Church by church ({comparable.length})
               </h2>
-              <label className="text-sm text-navy-600">
-                Sort by{' '}
+              <label className="flex items-center justify-between gap-2 text-sm text-navy-600 sm:justify-start">
+                <span>Sort by:</span>
                 <select
                   // No text-sm: under 16px iOS zooms the page on focus, and a
                   // Tailwind utility would beat the base rule that prevents it.
-                  className="min-h-[40px] rounded-lg border border-navy-200 bg-white px-2 py-1"
+                  className="min-h-[40px] rounded-lg border border-navy-200 bg-white px-3 py-1.5 font-medium text-navy-900"
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value as SortKey)}
                 >

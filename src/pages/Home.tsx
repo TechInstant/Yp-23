@@ -95,11 +95,11 @@ export default function Home() {
               <strong>{formatSundayLong(SEASON_START)}</strong>.
             </p>
 
-            <div className="mt-7 flex flex-wrap gap-3">
-              <Link to="/submit" className="btn-primary">
+            <div className="mt-7 flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:gap-3">
+              <Link to="/submit" className="btn-primary w-full sm:w-auto">
                 Submit this Sunday&apos;s attendance
               </Link>
-              <Link to="/register" className="btn-ghost">
+              <Link to="/register" className="btn-ghost w-full sm:w-auto">
                 Confirm your parish
               </Link>
             </div>

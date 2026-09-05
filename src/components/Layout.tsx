@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link, NavLink, Outlet } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
 import Logo from './Logo'
 
 const NAV = [
@@ -18,6 +19,9 @@ function navClass({ isActive }: { isActive: boolean }) {
 
 export default function Layout() {
   const [open, setOpen] = useState(false)
+  // An admin browsing the public site should not be invited to sign in again.
+  const { isAdmin, loading } = useAuth()
+  const signedIn = !loading && isAdmin
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -33,8 +37,11 @@ export default function Layout() {
                 {item.label}
               </NavLink>
             ))}
-            <Link to="/admin" className="btn-primary btn-sm ml-2">
-              Admin
+            <Link
+              to={signedIn ? '/admin/dashboard' : '/admin'}
+              className="btn-primary btn-sm ml-2"
+            >
+              {signedIn ? 'Dashboard' : 'Admin'}
             </Link>
           </nav>
 
@@ -69,8 +76,12 @@ export default function Layout() {
                 {item.label}
               </NavLink>
             ))}
-            <Link to="/admin" className="btn-primary mt-2" onClick={() => setOpen(false)}>
-              Admin sign in
+            <Link
+              to={signedIn ? '/admin/dashboard' : '/admin'}
+              className="btn-primary mt-2"
+              onClick={() => setOpen(false)}
+            >
+              {signedIn ? 'Go to dashboard' : 'Admin sign in'}
             </Link>
           </nav>
         )}
@@ -86,8 +97,11 @@ export default function Layout() {
             RCCG Youth Province 23. Weekly Sunday service returns, September 2026 – December
             2029.
           </p>
-          <Link to="/admin" className="font-medium text-navy-700 hover:text-navy-900">
-            Provincial admin →
+          <Link
+            to={signedIn ? '/admin/dashboard' : '/admin'}
+            className="font-medium text-navy-700 hover:text-navy-900"
+          >
+            {signedIn ? 'Provincial dashboard →' : 'Provincial admin →'}
           </Link>
         </div>
       </footer>

@@ -10,6 +10,7 @@ import {
   YAxis,
 } from 'recharts'
 import { BrandMark } from '../components/Logo'
+import { useAuth } from '../context/AuthContext'
 import { Spinner } from '../components/ui'
 import { useAttendance } from '../hooks/useAttendance'
 import { useParishes } from '../hooks/useParishes'
@@ -31,6 +32,7 @@ import {
  * act on it can see it in context.
  */
 export default function Home() {
+  const { user, isAdmin, role, loading: authLoading } = useAuth()
   const { active, loading } = useParishes()
   const range = useMemo(() => resolveRange('last8'), [])
   const { records } = useAttendance(range)
@@ -57,6 +59,28 @@ export default function Home() {
 
   return (
     <div className="space-y-10">
+      {!authLoading && user && isAdmin && (
+        <div className="card flex flex-col gap-3 border-navy-200 bg-navy-900 p-4 text-white sm:flex-row sm:items-center sm:justify-between sm:p-5">
+          <div className="min-w-0">
+            <p className="font-semibold">
+              Signed in as {role === 'super' ? 'super admin' : 'admin'}
+            </p>
+            <p className="mt-0.5 truncate text-sm text-navy-200">{user.email}</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Link to="/admin/dashboard" className="btn-gold btn-sm">
+              Dashboard
+            </Link>
+            <Link to="/admin/parishes" className="btn-ghost btn-sm">
+              Parishes
+            </Link>
+            <Link to="/admin/attendance" className="btn-ghost btn-sm">
+              Attendance
+            </Link>
+          </div>
+        </div>
+      )}
+
       <section className="card overflow-hidden">
         <div className="grid gap-8 p-6 sm:p-10 lg:grid-cols-[1.2fr_1fr] lg:items-center">
           <div>

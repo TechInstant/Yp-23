@@ -157,10 +157,18 @@ export default function AdminLayout() {
           <span className="font-semibold text-navy-900">Provincial admin</span>
         </header>
 
-        {/* The only scrolling element in the admin area. */}
+        {/*
+          The only scrolling element in the admin area.
+
+          overflow-x is pinned to hidden on purpose. Setting only overflow-y
+          makes the other axis compute to `auto`, so a single overflowing child
+          — a wide table, a long phone number in a button — lets the entire page
+          be dragged sideways. Tables keep their own overflow-x-auto wrapper, so
+          they still scroll; it is only the page that is held still.
+        */}
         <main
           ref={main}
-          className="min-w-0 flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6 lg:p-8"
+          className="min-w-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain p-4 sm:p-6 lg:p-8"
         >
           <Outlet />
         </main>

@@ -195,7 +195,11 @@ service cloud.firestore {
       // parish list is public, so an open update would let anyone overwrite any
       // pastor's name at will. A parish that genuinely changes hands is
       // re-pointed by an admin, who is exempt from this check.
-      allow update: if isAdmin() ||
+      // Changing or removing a parish is super-admin work: the directory is the
+      // spine of the whole exercise, and a deleted parish orphans every return
+      // ever filed against it. Plain admins add parishes and record attendance;
+      // they do not reshape the directory.
+      allow update: if isSuperAdmin() ||
                     (
                       incoming().diff(resource.data).affectedKeys().hasOnly([
                         'pastorName', 'updatedAt'
@@ -206,7 +210,7 @@ service cloud.firestore {
                       && incoming().pastorName.size() <= 120
                     );
 
-      allow delete: if isAdmin();
+      allow delete: if isSuperAdmin();
     }
 
     match /parishContacts/{parishId} {

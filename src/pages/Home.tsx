@@ -167,7 +167,11 @@ export default function Home() {
             {uploaded.map((r) => (
               <li
                 key={r.id}
-                className="flex items-center justify-between gap-2 rounded-lg border border-emerald-100 bg-emerald-50/60 px-3 py-2 text-sm"
+                /* min-w-0: a grid child defaults to min-width:auto, so a name
+                   like "RCCG LIVING SEED CHURCH - THE MOVEMENT" widens the
+                   whole track and pushes the page off-screen. The truncate on
+                   the span inside cannot help until the cell itself can shrink. */
+                className="flex min-w-0 items-center justify-between gap-2 rounded-lg border border-emerald-100 bg-emerald-50/60 px-3 py-2 text-sm"
               >
                 <span className="min-w-0 truncate font-medium text-navy-800" title={r.parishName}>
                   {r.parishName}
@@ -189,7 +193,7 @@ export default function Home() {
               {outstanding.map((p) => (
                 <li
                   key={p.id}
-                  className="rounded-full bg-navy-50 px-3 py-1 text-xs font-medium text-navy-600"
+                  className="max-w-full rounded-full bg-navy-50 px-3 py-1 text-xs font-medium text-navy-600"
                 >
                   {p.name}
                 </li>

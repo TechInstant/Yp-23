@@ -12,6 +12,7 @@ import {
 } from 'firebase/firestore'
 import { Alert, EmptyState, Field, Modal, Spinner, StatusBadge } from '../../components/ui'
 import { DIRECTORY_COUNT, flattenDirectory } from '../../data/provinceStructure'
+import { useAuth } from '../../context/AuthContext'
 import { useParishContacts } from '../../hooks/useParishContacts'
 import { useParishes } from '../../hooks/useParishes'
 import { downloadCsv, parseCsv, toCsv } from '../../lib/csv'
@@ -29,6 +30,7 @@ interface Draft {
 const BLANK: Draft = { name: '', pastorName: '', phone: '', status: 'active' }
 
 export default function ParishesAdmin() {
+  const { isSuperAdmin } = useAuth()
   const { parishes, loading } = useParishes()
   const { phones, contacts, refresh: refreshContacts } = useParishContacts()
 
@@ -444,22 +446,28 @@ export default function ParishesAdmin() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-2 border-t border-navy-100 pt-3">
-                {p.status === 'pending' && (
-                  <button type="button" className="btn-gold btn-sm col-span-2" onClick={() => void approve(p)}>
-                    Approve parish
+              {isSuperAdmin ? (
+                <div className="grid grid-cols-2 gap-2 border-t border-navy-100 pt-3">
+                  {p.status === 'pending' && (
+                    <button type="button" className="btn-gold btn-sm col-span-2" onClick={() => void approve(p)}>
+                      Approve parish
+                    </button>
+                  )}
+                  <button type="button" className="btn-ghost btn-sm" onClick={() => openEdit(p)}>
+                    Edit
                   </button>
-                )}
-                <button type="button" className="btn-ghost btn-sm" onClick={() => openEdit(p)}>
-                  Edit
-                </button>
-                <button type="button" className="btn-ghost btn-sm" onClick={() => void archive(p)}>
-                  {p.status === 'archived' ? 'Restore' : 'Archive'}
-                </button>
-                <button type="button" className="btn-danger btn-sm col-span-2" onClick={() => void remove(p)}>
-                  Delete
-                </button>
-              </div>
+                  <button type="button" className="btn-ghost btn-sm" onClick={() => void archive(p)}>
+                    {p.status === 'archived' ? 'Restore' : 'Archive'}
+                  </button>
+                  <button type="button" className="btn-danger btn-sm col-span-2" onClick={() => void remove(p)}>
+                    Delete
+                  </button>
+                </div>
+              ) : (
+                <p className="border-t border-navy-100 pt-3 text-xs italic text-navy-400">
+                  Only a super admin can change or remove a parish.
+                </p>
+              )}
             </li>
           ))}
         </ul>
@@ -516,34 +524,38 @@ export default function ParishesAdmin() {
                     <StatusBadge status={p.status} />
                   </td>
                   <td className="td">
-                    <div className="flex flex-wrap justify-end gap-1.5">
-                      {p.status === 'pending' && (
+                    {isSuperAdmin ? (
+                      <div className="flex flex-wrap justify-end gap-1.5">
+                        {p.status === 'pending' && (
+                          <button
+                            type="button"
+                            className="btn-gold btn-sm"
+                            onClick={() => void approve(p)}
+                          >
+                            Approve
+                          </button>
+                        )}
+                        <button type="button" className="btn-ghost btn-sm" onClick={() => openEdit(p)}>
+                          Edit
+                        </button>
                         <button
                           type="button"
-                          className="btn-gold btn-sm"
-                          onClick={() => void approve(p)}
+                          className="btn-ghost btn-sm"
+                          onClick={() => void archive(p)}
                         >
-                          Approve
+                          {p.status === 'archived' ? 'Restore' : 'Archive'}
                         </button>
-                      )}
-                      <button type="button" className="btn-ghost btn-sm" onClick={() => openEdit(p)}>
-                        Edit
-                      </button>
-                      <button
-                        type="button"
-                        className="btn-ghost btn-sm"
-                        onClick={() => void archive(p)}
-                      >
-                        {p.status === 'archived' ? 'Restore' : 'Archive'}
-                      </button>
-                      <button
-                        type="button"
-                        className="btn-danger btn-sm"
-                        onClick={() => void remove(p)}
-                      >
-                        Delete
-                      </button>
-                    </div>
+                        <button
+                          type="button"
+                          className="btn-danger btn-sm"
+                          onClick={() => void remove(p)}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    ) : (
+                      <p className="text-right text-xs italic text-navy-400">Super admin only</p>
+                    )}
                   </td>
                 </tr>
               ))}

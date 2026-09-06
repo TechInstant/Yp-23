@@ -4,6 +4,7 @@ import { deleteDoc, doc, serverTimestamp, setDoc, updateDoc, writeBatch } from '
 import SubmissionExceptions from '../../components/SubmissionExceptions'
 import SundayPicker from '../../components/SundayPicker'
 import { Alert, EmptyState, Field, Modal, Spinner } from '../../components/ui'
+import { useAuth } from '../../context/AuthContext'
 import { useAttendance } from '../../hooks/useAttendance'
 import { useParishes } from '../../hooks/useParishes'
 import { downloadCsv, parseCsv, toCsv } from '../../lib/csv'
@@ -23,6 +24,7 @@ export default function AttendanceAdmin() {
   const [preset, setPreset] = useState<RangePresetKey>('last8')
   const range = useMemo(() => resolveRange(preset), [preset])
 
+  const { isSuperAdmin } = useAuth()
   const { active, loading: parishesLoading } = useParishes()
   const { records, loading, error } = useAttendance(range)
 
@@ -289,7 +291,12 @@ export default function AttendanceAdmin() {
                 )}
               </div>
 
-              <div className="grid grid-cols-2 gap-2 border-t border-navy-100 pt-3">
+              <div
+                className={`grid gap-2 border-t border-navy-100 pt-3 ${
+                  isSuperAdmin ? 'grid-cols-2' : 'grid-cols-1'
+                }`}
+              >
+                {isSuperAdmin && (
                   <button
                     type="button"
                     className="btn-ghost btn-sm"
@@ -297,13 +304,14 @@ export default function AttendanceAdmin() {
                   >
                     Edit
                   </button>
-                  <button
-                    type="button"
-                    className="btn-danger btn-sm"
-                    onClick={() => void removeRecord(r)}
-                  >
-                    Delete
-                  </button>
+                )}
+                <button
+                  type="button"
+                  className="btn-danger btn-sm"
+                  onClick={() => void removeRecord(r)}
+                >
+                  Delete
+                </button>
               </div>
             </li>
           ))}
@@ -342,6 +350,7 @@ export default function AttendanceAdmin() {
                   </td>
                   <td className="td">
                     <div className="flex justify-end gap-1.5">
+                      {isSuperAdmin && (
                         <button
                           type="button"
                           className="btn-ghost btn-sm"
@@ -349,13 +358,14 @@ export default function AttendanceAdmin() {
                         >
                           Edit
                         </button>
-                        <button
-                          type="button"
-                          className="btn-danger btn-sm"
-                          onClick={() => void removeRecord(r)}
-                        >
-                          Delete
-                        </button>
+                      )}
+                      <button
+                        type="button"
+                        className="btn-danger btn-sm"
+                        onClick={() => void removeRecord(r)}
+                      >
+                        Delete
+                      </button>
                     </div>
                   </td>
                 </tr>

@@ -334,7 +334,13 @@ service cloud.firestore {
                       && incoming().createdAt == request.time
                     );
 
-      allow update, delete: if isAdmin();
+      // Editing rewrites a figure in place and leaves no trace in the charts —
+      // super admins only. Deleting stays with admins because it is the visible
+      // correction: the record goes, the parish shows as not reported, and
+      // either the parish re-files or an admin re-enters it. A wrong number can
+      // still be fixed without anyone being able to quietly change one.
+      allow update: if isSuperAdmin();
+      allow delete: if isAdmin();
     }
   }
 }

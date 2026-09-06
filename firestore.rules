@@ -200,6 +200,19 @@ service cloud.firestore {
       // ever filed against it. Plain admins add parishes and record attendance;
       // they do not reshape the directory.
       allow update: if isSuperAdmin() ||
+                    // Approving a self-registered parish is routine and would
+                    // otherwise queue behind one person, so any admin may do it
+                    // — but only that exact move: pending to active, touching
+                    // nothing but the status. Archiving, renaming and deleting
+                    // stay with super admins.
+                    (
+                      isAdmin()
+                      && incoming().diff(resource.data).affectedKeys().hasOnly([
+                           'status', 'updatedAt'
+                         ])
+                      && resource.data.status == 'pending'
+                      && incoming().status == 'active'
+                    ) ||
                     (
                       incoming().diff(resource.data).affectedKeys().hasOnly([
                         'pastorName', 'updatedAt'

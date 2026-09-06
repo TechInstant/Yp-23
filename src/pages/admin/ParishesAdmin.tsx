@@ -446,6 +446,14 @@ export default function ParishesAdmin() {
                 </div>
               </div>
 
+              {p.status === 'pending' && !isSuperAdmin && (
+                <div className="border-t border-navy-100 pt-3">
+                  <button type="button" className="btn-gold btn-sm w-full" onClick={() => void approve(p)}>
+                    Approve parish
+                  </button>
+                </div>
+              )}
+
               {isSuperAdmin ? (
                 <div className="grid grid-cols-2 gap-2 border-t border-navy-100 pt-3">
                   {p.status === 'pending' && (
@@ -465,7 +473,7 @@ export default function ParishesAdmin() {
                 </div>
               ) : (
                 <p className="border-t border-navy-100 pt-3 text-xs italic text-navy-400">
-                  Only a super admin can change or remove a parish.
+                  Only a super admin can edit, archive or remove a parish.
                 </p>
               )}
             </li>
@@ -524,6 +532,17 @@ export default function ParishesAdmin() {
                     <StatusBadge status={p.status} />
                   </td>
                   <td className="td">
+                    {!isSuperAdmin && p.status === 'pending' && (
+                      <div className="flex justify-end">
+                        <button
+                          type="button"
+                          className="btn-gold btn-sm"
+                          onClick={() => void approve(p)}
+                        >
+                          Approve
+                        </button>
+                      </div>
+                    )}
                     {isSuperAdmin ? (
                       <div className="flex flex-wrap justify-end gap-1.5">
                         {p.status === 'pending' && (
@@ -554,7 +573,9 @@ export default function ParishesAdmin() {
                         </button>
                       </div>
                     ) : (
-                      <p className="text-right text-xs italic text-navy-400">Super admin only</p>
+                      p.status !== 'pending' && (
+                        <p className="text-right text-xs italic text-navy-400">Super admin only</p>
+                      )
                     )}
                   </td>
                 </tr>

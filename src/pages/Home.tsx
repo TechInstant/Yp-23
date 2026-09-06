@@ -10,6 +10,7 @@ import {
   YAxis,
 } from 'recharts'
 import { BrandMark } from '../components/Logo'
+import ParishTrend from '../components/ParishTrend'
 import { useAuth } from '../context/AuthContext'
 import { Spinner } from '../components/ui'
 import { useAttendance } from '../hooks/useAttendance'
@@ -143,6 +144,8 @@ export default function Home() {
           body="Your parish appears in the uploaded list below as soon as the return is saved."
         />
       </section>
+
+      <ParishTrend parishes={active} />
 
       <section className="card p-6">
         <div className="flex flex-wrap items-baseline justify-between gap-2">

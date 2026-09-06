@@ -1,27 +1,12 @@
 {
   "indexes": [
     {
+      "_comment": "Serves a parish's own history: where(parishId ==) + orderBy(date). Firestore reads the same index backwards, so the descending query the public trend chart uses needs no second index.",
       "collectionGroup": "attendance",
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "parishId", "order": "ASCENDING" },
         { "fieldPath": "date", "order": "ASCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "attendance",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "family", "order": "ASCENDING" },
-        { "fieldPath": "date", "order": "ASCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "parishes",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "family", "order": "ASCENDING" },
-        { "fieldPath": "name", "order": "ASCENDING" }
       ]
     }
   ],

@@ -370,6 +370,12 @@ service cloud.firestore {
                            'attendance', 'note', 'source', 'createdAt', 'updatedAt'
                          ])
                       && exists(/databases/$(database)/documents/parishes/$(incoming().parishId))
+                      // The parish must have been confirmed first. Until a
+                      // pastor puts their name against it, nobody knows who is
+                      // filing, and a return with no one accountable for it is
+                      // worth less than no return at all.
+                      && get(/databases/$(database)/documents/parishes/$(incoming().parishId))
+                           .data.get('pastorName', '').trim().size() >= 2
                       && isTrackedSunday(incoming().date)
                       // On the Sunday itself — unless a super admin has opened
                       // that exact Sunday for that exact parish. The exception

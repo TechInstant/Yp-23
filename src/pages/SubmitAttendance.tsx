@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { doc, getDoc, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore'
+import { doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore'
 import { Alert, Field, Spinner } from '../components/ui'
 import { useParishes } from '../hooks/useParishes'
 import { useSubmissionExceptions } from '../hooks/useSubmissionExceptions'
@@ -114,6 +114,16 @@ export default function SubmitAttendance() {
     event.preventDefault()
     if (!parish) return
 
+    // The rules refuse a return for a parish nobody has claimed, so stop here
+    // with an explanation rather than a permission error.
+    if (!parish.pastorName.trim()) {
+      setStatus({
+        kind: 'error',
+        message: `${parish.name} has not been confirmed yet. Confirm the parish first, then file the return.`,
+      })
+      return
+    }
+
     if (pastorName.trim().length < 2) {
       setStatus({ kind: 'error', message: 'Enter the name of the pastor filing this return.' })
       return
@@ -179,24 +189,6 @@ export default function SubmitAttendance() {
         )
       } catch {
         /* contact refresh is not worth failing the submission over */
-      }
-
-      // Put the name on the public parish record too, if it has none yet.
-      //
-      // Filing a return proves who is in charge just as well as the confirm
-      // form does, and without this a parish that went straight to submitting
-      // reads as "no pastor on record" in the directory for ever, even though
-      // the province has the name on every return. The rules only permit this
-      // while the field is empty, so it can never overwrite a confirmed name.
-      if (!parish.pastorName.trim()) {
-        try {
-          await updateDoc(doc(db, COLLECTIONS.parishes, parish.id), {
-            pastorName: pastorName.trim(),
-            updatedAt: serverTimestamp(),
-          })
-        } catch {
-          /* already confirmed by someone else, or refused; the return stands */
-        }
       }
 
       setStatus({ kind: 'saved', parish: parish.name, date, attendance: count })
@@ -297,10 +289,32 @@ export default function SubmitAttendance() {
             {options.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.name}
+                {p.pastorName.trim() ? '' : ' (not confirmed yet)'}
               </option>
             ))}
           </select>
         </Field>
+
+        {/*
+          Unconfirmed parishes stay in the list rather than being filtered out.
+          A parish that simply vanished would read as missing, and the pastor
+          would register a duplicate instead of confirming the one already there.
+        */}
+        {parish && !parish.pastorName.trim() && (
+          <Alert tone="warning" title="Confirm this parish first">
+            <p>
+              Nobody has put their name against <strong>{parish.name}</strong> yet, so returns
+              cannot be filed for it.
+            </p>
+            <p className="mt-2">
+              <Link to="/register" className="font-medium underline">
+                Confirm your parish
+              </Link>{' '}
+              with your name and phone number. It takes a moment and is only needed once, then
+              come back here.
+            </p>
+          </Alert>
+        )}
 
         <div className="grid gap-5 sm:grid-cols-2">
           <Field label="Name of the pastor" required>
@@ -399,7 +413,12 @@ export default function SubmitAttendance() {
             type="submit"
             className="btn-primary w-full sm:w-auto"
             disabled={
-              status.kind === 'saving' || !parish || Boolean(existing) || !started || !canSubmit
+              status.kind === 'saving' ||
+              !parish ||
+              !parish.pastorName.trim() ||
+              Boolean(existing) ||
+              !started ||
+              !canSubmit
             }
           >
             {status.kind === 'saving' ? 'Saving…' : 'Submit attendance'}

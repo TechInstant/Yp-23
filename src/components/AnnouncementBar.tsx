@@ -38,15 +38,24 @@ function Notice({ announcement }: { announcement: Announcement }) {
   const seconds = Math.max(12, Math.round((message.length * 2) / 9) + 6)
 
   return (
-    <div className="marquee overflow-hidden py-2.5" role="status" aria-live="polite">
-      <div className="marquee-track" style={{ animationDuration: `${seconds}s` }}>
-        {/* Twice, so the loop is seamless — the keyframes slide exactly half
-            the track width. The copy is aria-hidden so a screen reader is not
-            read the same notice twice. */}
+    <div className="marquee overflow-hidden py-2.5 flex select-none" role="status" aria-live="polite">
+      {/* 
+        Two identical marquee items side-by-side. Each item has min-width: 100% and
+        translates -100%. This provides a seamless loop across all mobile devices
+        without flex percentage sizing bugs.
+      */}
+      <div
+        className="marquee-item shrink-0 flex items-center justify-around min-w-full"
+        style={{ animationDuration: `${seconds}s` }}
+      >
         <span className="px-4 text-sm font-medium text-gold-900">{message}</span>
-        <span className="px-4 text-sm font-medium text-gold-900" aria-hidden>
-          {message}
-        </span>
+      </div>
+      <div
+        className="marquee-item shrink-0 flex items-center justify-around min-w-full"
+        style={{ animationDuration: `${seconds}s` }}
+        aria-hidden="true"
+      >
+        <span className="px-4 text-sm font-medium text-gold-900">{message}</span>
       </div>
     </div>
   )

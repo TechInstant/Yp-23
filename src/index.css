@@ -146,94 +146,70 @@
   /*
    * Scrolling announcement ticker.
    *
-   * The track holds the message twice and slides exactly half its width, so the
-   * second copy is in place as the first leaves — a seamless loop with no gap
-   * and no JavaScript.
-   *
-   * Duration is set inline from the message length, because a fixed duration
-   * makes a short notice crawl and a long one race past unread.
+   * Built with two duplicated track segments (min-w-full) that both translate
+   * -100%. This guarantees a 100% seamless, smooth loop on all screen sizes,
+   * avoiding flex intrinsic sizing / cyclic percentage bugs on mobile Safari,
+   * Android WebViews, and Samsung Internet.
    */
-  .marquee-track {
+  .marquee {
     display: flex;
-    /*
-     * Sized to the content, not the container. A shrink-to-fit box is capped by
-     * its containing block, so on a phone the track became the width of the
-     * screen with the text overflowing, and the keyframes then slid 50% of the
-     * *screen* rather than 50% of the content — barely moving, never looping.
-     *
-     * -webkit- first for older iOS Safari, which supports the value only under
-     * the prefix and would otherwise drop the declaration entirely and fall
-     * back to shrink-to-fit.
-     */
-    width: -webkit-max-content;
-    width: max-content;
-    /*
-     * And a floor of two container widths, so a *short* message still travels.
-     * Sized purely to content, "Submit today" is narrower than the screen, and
-     * half of a narrow track is a few pixels of movement that reads as static.
-     */
-    min-width: 200%;
+    overflow: hidden;
+    user-select: none;
+    width: 100%;
+  }
+
+  .marquee-item {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    min-width: 100%;
     white-space: nowrap;
-    /* Nudges iOS onto the compositor; without it the animation can simply not
-       start on some devices. */
-    transform: translateZ(0);
-    backface-visibility: hidden;
     will-change: transform;
-    animation: marquee-scroll linear infinite;
+    animation-name: marquee-scroll;
+    animation-timing-function: linear;
+    animation-iteration-count: infinite;
   }
 
-  /*
-   * Each copy takes exactly half the track, which makes the -50% slide equal
-   * one copy in both regimes: when the track is sized to content, half of it is
-   * one copy's natural width; when the 200% floor applies to a short message,
-   * half is one screen width. Without this a short notice scrolls fully
-   * off-screen and then jumps back.
-   */
-  .marquee-track > * {
-    flex: 0 0 50%;
-  }
-
-  /* translate3d keeps the element on the compositor for the whole animation;
-     a plain translateX can drop it back to software rendering on iOS. */
   @keyframes marquee-scroll {
     from {
       transform: translate3d(0, 0, 0);
     }
     to {
-      transform: translate3d(-50%, 0, 0);
+      transform: translate3d(-100%, 0, 0);
+    }
+  }
+
+  @-webkit-keyframes marquee-scroll {
+    from {
+      -webkit-transform: translate3d(0, 0, 0);
+    }
+    to {
+      -webkit-transform: translate3d(-100%, 0, 0);
     }
   }
 
   /*
-   * Pause-to-read, but only where a pointer can actually hover.
-   *
-   * On iOS a tap applies :hover and it STAYS applied until you tap something
-   * else, so a single tap anywhere near the bar would pause the ticker for
-   * good — which looks exactly like an animation that never runs. The media
-   * query keeps this for mice and trackpads and away from touchscreens.
+   * Pause-to-read, but only where a pointer can actually hover (mouse/trackpad).
+   * Prevents sticky hover pauses on mobile touch screens or stylus devices.
    */
   @media (hover: hover) and (pointer: fine) {
-    .marquee:hover .marquee-track {
+    .marquee:hover .marquee-item {
       animation-play-state: paused;
     }
   }
 
-  /* Keyboard focus is unambiguous on any device, so it pauses everywhere. */
-  .marquee:focus-within .marquee-track {
-    animation-play-state: paused;
-  }
-
-  /*
-   * Motion sickness and reading difficulties are both real; moving text is a
-   * known problem for either. Anyone who has asked their device for less motion
-   * gets the message standing still, wrapped normally.
-   */
+  /* Accessible fallback for users requesting reduced motion */
   @media (prefers-reduced-motion: reduce) {
-    .marquee-track {
+    .marquee {
+      overflow-x: auto;
+    }
+    .marquee-item {
       animation: none;
+      min-width: auto;
       white-space: normal;
     }
-    .marquee-track > :last-child {
+    .marquee-item:last-child {
       display: none;
     }
   }

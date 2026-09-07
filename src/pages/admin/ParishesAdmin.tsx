@@ -36,6 +36,7 @@ export default function ParishesAdmin() {
 
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState<ParishStatus | ''>('')
+  const [onlyUnconfirmed, setOnlyUnconfirmed] = useState(false)
 
   const [editing, setEditing] = useState<Parish | null>(null)
   const [creating, setCreating] = useState(false)
@@ -46,16 +47,26 @@ export default function ParishesAdmin() {
 
   const pendingCount = parishes.filter((p) => p.status === 'pending').length
 
+  // Unconfirmed parishes cannot file at all, so this is the number that
+  // actually needs chasing before a Sunday. Archived ones are excluded: they
+  // are not expected to report.
+  const unconfirmedCount = parishes.filter(
+    (p) =>
+      p.status !== 'archived' &&
+      !(contacts[p.id]?.pastorName || p.pastorName || '').trim(),
+  ).length
+
   const filtered = useMemo(() => {
     const needle = search.trim().toLowerCase()
     return parishes
       .filter((p) => {
         if (status && p.status !== status) return false
+        if (onlyUnconfirmed && (contacts[p.id]?.pastorName || p.pastorName || '').trim()) return false
         if (!needle) return true
         return `${p.name} ${p.pastorName} ${phones[p.id] ?? ''}`.toLowerCase().includes(needle)
       })
       .sort((a, b) => a.name.localeCompare(b.name))
-  }, [parishes, search, status, phones])
+  }, [parishes, search, status, phones, onlyUnconfirmed, contacts])
 
   function openCreate() {
     setDraft(BLANK)
@@ -326,6 +337,21 @@ export default function ParishesAdmin() {
                 </button>
               </>
             )}
+            {unconfirmedCount > 0 && (
+              <>
+                {' · '}
+                <button
+                  type="button"
+                  className="font-semibold text-gold-700 underline"
+                  onClick={() => {
+                    setOnlyUnconfirmed(true)
+                    setStatus('')
+                  }}
+                >
+                  {unconfirmedCount} not confirmed
+                </button>
+              </>
+            )}
           </p>
         </div>
         <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
@@ -382,6 +408,17 @@ export default function ParishesAdmin() {
           <option value="pending">Pending approval</option>
           <option value="archived">Archived</option>
         </select>
+        {/* Separate from status on purpose: confirmation is not a status, and a
+            parish can be unconfirmed while active, pending or archived. */}
+        <label className="flex items-center gap-2.5 text-sm font-medium text-navy-700">
+          <input
+            type="checkbox"
+            className="h-4 w-4 shrink-0 rounded border-navy-300"
+            checked={onlyUnconfirmed}
+            onChange={(e) => setOnlyUnconfirmed(e.target.checked)}
+          />
+          Not confirmed yet
+        </label>
       </div>
 
       {filtered.length === 0 ? (

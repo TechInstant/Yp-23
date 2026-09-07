@@ -154,7 +154,16 @@
    * makes a short notice crawl and a long one race past unread.
    */
   .marquee-track {
-    display: inline-flex;
+    display: flex;
+    /*
+     * max-content is load-bearing. An inline-flex or plain flex box is
+     * shrink-to-fit, capped by its containing block, so on a phone the track
+     * became the width of the screen with the text overflowing — and the
+     * keyframes then slid 50% of the *screen* rather than 50% of the content,
+     * which looks like the ticker is barely moving and never loops. Sizing to
+     * the content makes -50% exactly one copy again.
+     */
+    width: max-content;
     white-space: nowrap;
     will-change: transform;
     animation: marquee-scroll linear infinite;

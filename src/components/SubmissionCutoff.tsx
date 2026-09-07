@@ -9,6 +9,7 @@ import {
   minutesToLabel,
   NO_CUTOFF,
   utcToWatMinutes,
+  WAT_OFFSET_MINUTES,
   watToUtcMinutes,
 } from '../lib/submissionWindow'
 
@@ -50,14 +51,14 @@ export default function SubmissionCutoff() {
       setMessage({ tone: 'error', text: 'Enter a time like 23:30.' })
       return
     }
-    // Past 23:00 WAT the cut-off crosses UTC midnight, where the rules' minute
-    // comparison can no longer express "later today" and would read as closed
-    // all day. Refuse it rather than ship a setting that silently blocks every
-    // parish.
-    if (watMinutes > 23 * 60) {
+    // WAT is UTC+1, so a WAT time before 01:00 lands on the *previous* UTC day
+    // (00:30 WAT is 23:30 UTC on Saturday) and the rules' minute comparison
+    // would then measure against the wrong day entirely. Every evening time is
+    // fine: 23:30 WAT is 22:30 UTC, still inside the same reporting Sunday.
+    if (watMinutes < WAT_OFFSET_MINUTES) {
       setMessage({
         tone: 'error',
-        text: 'The latest workable cut-off is 23:00. Leave it at 23:59 for no cut-off at all.',
+        text: 'Choose a time from 01:00 onwards. A cut-off before 1am falls on the previous day once converted.',
       })
       return
     }
@@ -104,13 +105,13 @@ export default function SubmissionCutoff() {
 
       <form onSubmit={save} className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end">
         <div className="sm:w-48">
-          <Field label="Closes at (WAT)" hint="Use 23:59 for no cut-off.">
+          <Field label="Closes at (WAT)" hint="23:59 leaves it open all Sunday.">
             <input
               className="input"
               type="time"
               value={value}
               onChange={(e) => setValue(e.target.value)}
-              max="23:00"
+              min="01:00"
             />
           </Field>
         </div>

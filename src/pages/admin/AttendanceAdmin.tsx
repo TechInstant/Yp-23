@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { deleteDoc, doc, serverTimestamp, setDoc, updateDoc, writeBatch } from 'firebase/firestore'
+import SubmissionCutoff from '../../components/SubmissionCutoff'
 import SubmissionExceptions from '../../components/SubmissionExceptions'
 import SundayPicker from '../../components/SundayPicker'
 import { Alert, EmptyState, Field, Modal, Spinner } from '../../components/ui'
@@ -375,6 +376,8 @@ export default function AttendanceAdmin() {
         </div>
         </>
       )}
+
+      <SubmissionCutoff />
 
       <SubmissionExceptions parishes={active} />
 

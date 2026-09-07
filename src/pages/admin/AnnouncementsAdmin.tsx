@@ -116,6 +116,16 @@ export default function AnnouncementsAdmin() {
         </Field>
 
         <div className="flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            className="btn-ghost btn-sm"
+            onClick={() => {
+              setShowFrom(today)
+              if (showUntil < today) setShowUntil(today)
+            }}
+          >
+            Start now
+          </button>
           <button type="button" className="btn-ghost btn-sm" onClick={useSundayOnly}>
             Set for {formatSundayLong(thisSunday)} only
           </button>

@@ -103,6 +103,37 @@ service cloud.firestore {
       return d == todayString();
     }
 
+    /**
+     * The daily cut-off, as minutes past UTC midnight.
+     *
+     * Rules can read the hour and minute off `request.time` but cannot convert
+     * a timezone, so the province's WAT time is stored already converted. The
+     * default of 1439 is 23:59 UTC — no cut-off at all — so a project with no
+     * settings document behaves exactly as it did before this existed.
+     */
+    function submissionCutoff() {
+      let path = /databases/$(database)/documents/settings/submission;
+      return exists(path) ? get(path).data.get('closesAtUtcMinutes', 1439) : 1439;
+    }
+
+    function beforeCutoff() {
+      return (request.time.hours() * 60 + request.time.minutes()) <= submissionCutoff();
+    }
+
+    /**
+     * Province settings. Publicly readable because the submission form has to
+     * show pastors the deadline they are working to; only a super admin sets it.
+     */
+    match /settings/{settingId} {
+      allow read: if true;
+      allow write: if isSuperAdmin()
+                   && settingId == 'submission'
+                   && incoming().keys().hasOnly(['closesAtUtcMinutes', 'updatedBy', 'updatedAt'])
+                   && incoming().closesAtUtcMinutes is int
+                   && incoming().closesAtUtcMinutes >= 0
+                   && incoming().closesAtUtcMinutes <= 1439;
+    }
+
     match /admins/{uid} {
       // Anyone signed in may read their OWN record, admins may read the list.
       //
@@ -348,6 +379,9 @@ service cloud.firestore {
                         isToday(incoming().date)
                         || exists(/databases/$(database)/documents/submissionExceptions/$(recordId))
                       )
+                      // Past the province's cut-off, the day is closed. Admins
+                      // are exempt, so a late figure can still be recorded.
+                      && beforeCutoff()
                       && incoming().pastorName is string
                       && incoming().pastorName.size() >= 2
                       && incoming().pastorName.size() <= 120

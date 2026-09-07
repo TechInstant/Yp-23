@@ -1,4 +1,6 @@
 import { Link } from 'react-router-dom'
+import { useSubmissionSettings } from '../hooks/useSubmissionSettings'
+import { minutesToLabel, NO_CUTOFF, utcToWatMinutes } from '../lib/submissionWindow'
 import { formatSundayLong, SEASON_END, SEASON_START } from '../lib/sundays'
 
 /**
@@ -9,6 +11,11 @@ import { formatSundayLong, SEASON_END, SEASON_START } from '../lib/sundays'
  * someone's downloads folder while the app moves on.
  */
 export default function Guide() {
+  const { closesAtUtcMinutes } = useSubmissionSettings()
+  const cutoffWat = utcToWatMinutes(closesAtUtcMinutes)
+  const deadline =
+    cutoffWat < NO_CUTOFF ? minutesToLabel(cutoffWat) : 'the end of the day'
+
   return (
     <div className="mx-auto max-w-3xl space-y-8">
       <header>
@@ -21,7 +28,7 @@ export default function Guide() {
         </p>
       </header>
 
-      <Step n="1" title="Confirm your parish — once, before the first Sunday">
+      <Step n="1" title="Confirm your parish before the first Sunday">
         <p>
           Open{' '}
           <Link to="/register" className="font-medium text-navy-800 underline">
@@ -32,8 +39,7 @@ export default function Guide() {
         </p>
         <p>
           This is done <strong>once</strong>. It tells the province who is in charge of your
-          parish and how to reach you. If your parish is not in the list, switch to{' '}
-          <em>My parish is not listed</em> and register it — the province will approve it.
+          parish and how to reach you. If your parish is not in the list, switch to "My parish is not listed" and register it. The province will approve it.
         </p>
         <Callout>
           A parish can only be confirmed once. If someone has already confirmed yours by mistake,
@@ -51,14 +57,13 @@ export default function Guide() {
           of people present.
         </p>
         <p>
-          The Sunday is filled in for you — you cannot pick the wrong date. Add a note if
+          The Sunday is filled in for you, so you cannot pick the wrong date. Add a note if
           something unusual happened, like a convention or a joint service, so the province reads
           the figure correctly.
         </p>
         <Callout tone="warning">
           <strong>The form only opens on Sundays.</strong> It is not available on Monday or during
-          the week. If you miss a Sunday, send your figure to the province — they can record it
-          for you, or re-open that Sunday so you can file it yourself.
+          the week. If you miss a Sunday, send your figure to the province. They can record it for you, or re-open that Sunday so you can file it yourself.
         </Callout>
       </Step>
 
@@ -68,24 +73,22 @@ export default function Guide() {
           <Link to="/" className="font-medium text-navy-800 underline">
             home page
           </Link>
-          . Your parish appears in the <em>Uploaded</em> list for that Sunday as soon as your
+          . Your parish appears in the "Uploaded" list for that Sunday as soon as your
           return is saved, with your figure beside it.
         </p>
         <p>
-          If it is not there, your return did not save — fill the form in again and watch for the
-          green confirmation.
+          If it is not there, your return did not save. Fill the form in again and watch for the green confirmation.
         </p>
       </Step>
 
       <Step n="4" title="Watch how your parish is doing">
         <p>
-          On the home page, pick your parish under <em>How is your parish doing?</em> You will see
+          On the home page, pick your parish under "How is your parish doing?" You will see
           your own Sundays, your average, your best Sunday, and whether you are growing, holding
           steady or declining.
         </p>
         <p>
-          The dashed blue line is your four-week average. That is the one to judge by — a single
-          Sunday moves up and down with the weather.
+          The dashed blue line is your four-week average. That is the one to judge by. A single Sunday moves up and down with the weather.
         </p>
         <Callout>Only your own parish is shown. No other parish&apos;s figures appear here.</Callout>
       </Step>
@@ -94,8 +97,7 @@ export default function Guide() {
         <h2 className="text-lg font-semibold text-navy-900">Common questions</h2>
         <dl className="mt-4 space-y-4 text-sm">
           <Faq q="I submitted the wrong number. Can I fix it?">
-            Not yourself — one return per parish per Sunday, so the form will not take a second
-            one. Send the correct figure to the province and they will change it.
+            Not yourself. One return per parish per Sunday, so the form will not take a second one. Send the correct figure to the province and they will change it.
           </Faq>
           <Faq q="Somebody else already submitted for my parish.">
             Tell the province. They can remove that return so the right figure can be filed.
@@ -104,12 +106,10 @@ export default function Guide() {
             No. Only province executives sign in. Pastors submit without an account.
           </Faq>
           <Faq q="I forgot to submit last Sunday.">
-            Send your figure to the province. They can record it, or re-open that Sunday so you
-            can file it yourself.
+            Send your reasons to the province. Note that submission closes {deadline} on Sundays unless the province says otherwise.
           </Faq>
           <Faq q="What number do I count?">
-            The total number of people present at the Sunday service — everyone, including
-            children and visitors — unless the province tells you otherwise.
+            The total number of people present at the Sunday service: everyone, including children and visitors, unless the province tells you otherwise.
           </Faq>
           <Faq q="My phone number has changed.">
             Just type the new one next time you submit. The province&apos;s contact list updates

@@ -4,7 +4,14 @@ import { doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore'
 import { Alert, Field, Spinner } from '../components/ui'
 import { useParishes } from '../hooks/useParishes'
 import { useSubmissionExceptions } from '../hooks/useSubmissionExceptions'
+import { useSubmissionSettings } from '../hooks/useSubmissionSettings'
 import { COLLECTIONS, db } from '../lib/firebase'
+import {
+  isWithinCutoff,
+  minutesToLabel,
+  NO_CUTOFF,
+  utcToWatMinutes,
+} from '../lib/submissionWindow'
 import {
   formatSundayLong,
   hasStarted,
@@ -43,6 +50,19 @@ export default function SubmitAttendance() {
   const openToday = isSubmissionDay()
   const nextSunday = nextSubmissionSunday()
   const { exceptions } = useSubmissionExceptions()
+  const { closesAtUtcMinutes } = useSubmissionSettings()
+
+  // Re-checked on a timer so a form left open through the deadline closes
+  // itself, rather than looking available and then being refused on submit.
+  const [now, setNow] = useState(() => new Date())
+  useEffect(() => {
+    const tick = window.setInterval(() => setNow(new Date()), 30_000)
+    return () => window.clearInterval(tick)
+  }, [])
+
+  const cutoffWat = utcToWatMinutes(closesAtUtcMinutes)
+  const hasCutoff = cutoffWat < NO_CUTOFF
+  const beforeCutoff = isWithinCutoff(closesAtUtcMinutes, now)
 
   // Sundays this parish may file for: today if it is one, plus any the
   // province has re-opened for them specifically.
@@ -52,7 +72,7 @@ export default function SubmitAttendance() {
     return [...new Set(all)].sort().reverse()
   }, [exceptions, parishId, openToday])
 
-  const canSubmit = allowedDates.length > 0
+  const canSubmit = allowedDates.length > 0 && beforeCutoff
   const parish = active.find((p) => p.id === parishId) ?? null
 
   const options = useMemo(
@@ -105,8 +125,16 @@ export default function SubmitAttendance() {
       return
     }
 
-    // The page could have sat open past midnight, in which case today's
-    // Sunday is no longer today and the write would be refused.
+    // Checked again at submit time: the form may have been open since before
+    // the deadline passed, and the rules would refuse the write anyway.
+    if (!isWithinCutoff(closesAtUtcMinutes)) {
+      setStatus({
+        kind: 'error',
+        message: `Returns closed at ${minutesToLabel(cutoffWat)} today. Send your figure to the provincial admin and they will record it for you.`,
+      })
+      return
+    }
+
     if (!allowedDates.includes(date)) {
       setStatus({
         kind: 'error',
@@ -192,7 +220,15 @@ export default function SubmitAttendance() {
           this form in on that Sunday.
         </Alert>
       ) : (
-        !canSubmit && (
+        !canSubmit &&
+        (allowedDates.length > 0 && !beforeCutoff ? (
+          <Alert tone="warning" title={`Returns closed at ${minutesToLabel(cutoffWat)}`}>
+            <p>
+              Today&apos;s submissions have closed. Send your figure to the provincial admin and
+              they will record it for you.
+            </p>
+          </Alert>
+        ) : (
           <Alert tone="warning" title="Returns are only filed on Sundays">
             <p>
               This form opens on the day of the service. Come back on{' '}
@@ -200,11 +236,17 @@ export default function SubmitAttendance() {
               submit your figure then.
             </p>
             <p className="mt-2">
-              If your parish missed a Sunday, send the figure to the provincial admin — they can
+              If your parish missed a Sunday, send the figure to the provincial admin. They can
               record it, or re-open that Sunday so you can file it yourself.
             </p>
           </Alert>
-        )
+        ))
+      )}
+
+      {canSubmit && hasCutoff && (
+        <p className="text-sm text-navy-600">
+          Returns close at <strong>{minutesToLabel(cutoffWat)}</strong> today.
+        </p>
       )}
 
       {status.kind === 'saved' && (

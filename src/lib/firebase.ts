@@ -131,6 +131,8 @@ export const COLLECTIONS = {
   admins: 'admins',
   adminInvites: 'adminInvites',
   announcements: 'announcements',
+  /** Province-wide settings; the only document is 'submission'. */
+  settings: 'settings',
   /** Doc id is `{parishId}_{date}` — the same id as the return it unlocks. */
   submissionExceptions: 'submissionExceptions',
 } as const

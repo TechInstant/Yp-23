@@ -156,30 +156,69 @@
   .marquee-track {
     display: flex;
     /*
-     * max-content is load-bearing. An inline-flex or plain flex box is
-     * shrink-to-fit, capped by its containing block, so on a phone the track
-     * became the width of the screen with the text overflowing — and the
-     * keyframes then slid 50% of the *screen* rather than 50% of the content,
-     * which looks like the ticker is barely moving and never loops. Sizing to
-     * the content makes -50% exactly one copy again.
+     * Sized to the content, not the container. A shrink-to-fit box is capped by
+     * its containing block, so on a phone the track became the width of the
+     * screen with the text overflowing, and the keyframes then slid 50% of the
+     * *screen* rather than 50% of the content — barely moving, never looping.
+     *
+     * -webkit- first for older iOS Safari, which supports the value only under
+     * the prefix and would otherwise drop the declaration entirely and fall
+     * back to shrink-to-fit.
      */
+    width: -webkit-max-content;
     width: max-content;
+    /*
+     * And a floor of two container widths, so a *short* message still travels.
+     * Sized purely to content, "Submit today" is narrower than the screen, and
+     * half of a narrow track is a few pixels of movement that reads as static.
+     */
+    min-width: 200%;
     white-space: nowrap;
+    /* Nudges iOS onto the compositor; without it the animation can simply not
+       start on some devices. */
+    transform: translateZ(0);
+    backface-visibility: hidden;
     will-change: transform;
     animation: marquee-scroll linear infinite;
   }
 
+  /*
+   * Each copy takes exactly half the track, which makes the -50% slide equal
+   * one copy in both regimes: when the track is sized to content, half of it is
+   * one copy's natural width; when the 200% floor applies to a short message,
+   * half is one screen width. Without this a short notice scrolls fully
+   * off-screen and then jumps back.
+   */
+  .marquee-track > * {
+    flex: 0 0 50%;
+  }
+
+  /* translate3d keeps the element on the compositor for the whole animation;
+     a plain translateX can drop it back to software rendering on iOS. */
   @keyframes marquee-scroll {
     from {
-      transform: translateX(0);
+      transform: translate3d(0, 0, 0);
     }
     to {
-      transform: translateX(-50%);
+      transform: translate3d(-50%, 0, 0);
     }
   }
 
-  /* Hovering or focusing lets someone actually finish reading it. */
-  .marquee:hover .marquee-track,
+  /*
+   * Pause-to-read, but only where a pointer can actually hover.
+   *
+   * On iOS a tap applies :hover and it STAYS applied until you tap something
+   * else, so a single tap anywhere near the bar would pause the ticker for
+   * good — which looks exactly like an animation that never runs. The media
+   * query keeps this for mice and trackpads and away from touchscreens.
+   */
+  @media (hover: hover) and (pointer: fine) {
+    .marquee:hover .marquee-track {
+      animation-play-state: paused;
+    }
+  }
+
+  /* Keyboard focus is unambiguous on any device, so it pauses everywhere. */
   .marquee:focus-within .marquee-track {
     animation-play-state: paused;
   }

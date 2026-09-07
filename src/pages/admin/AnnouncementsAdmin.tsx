@@ -34,7 +34,7 @@ export default function AnnouncementsAdmin() {
   const thisSunday = currentReportingSunday()
 
   /** One tap for the commonest notice: a reminder that runs on Sunday only. */
-  function useSundayOnly() {
+  function setForSundayOnly() {
     setShowFrom(thisSunday)
     setShowUntil(thisSunday)
     if (!message.trim()) {
@@ -126,7 +126,7 @@ export default function AnnouncementsAdmin() {
           >
             Start now
           </button>
-          <button type="button" className="btn-ghost btn-sm" onClick={useSundayOnly}>
+          <button type="button" className="btn-ghost btn-sm" onClick={setForSundayOnly}>
             Set for {formatSundayLong(thisSunday)} only
           </button>
           <span className="text-xs text-navy-500">

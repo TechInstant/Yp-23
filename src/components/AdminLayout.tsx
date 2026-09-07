@@ -13,6 +13,12 @@ const NAV = [
   { to: '/admin/parishes', label: 'Parishes', icon: 'M4 20V9l6-4 6 4v11M9 20v-5h4v5' },
   { to: '/admin/attendance', label: 'Attendance', icon: 'M4 5h14M4 10h14M4 15h9' },
   {
+    to: '/admin/submission-control',
+    label: 'Submission control',
+    icon: 'M12 8v4l3 2M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
+    superOnly: true,
+  },
+  {
     to: '/admin/compare',
     label: 'Compare Sundays',
     icon: 'M4 18V9M10 18V5M16 18v-6M3 21h18',

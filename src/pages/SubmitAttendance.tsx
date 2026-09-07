@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore'
+import { doc, getDoc, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore'
 import { Alert, Field, Spinner } from '../components/ui'
 import { useParishes } from '../hooks/useParishes'
 import { useSubmissionExceptions } from '../hooks/useSubmissionExceptions'
@@ -179,6 +179,24 @@ export default function SubmitAttendance() {
         )
       } catch {
         /* contact refresh is not worth failing the submission over */
+      }
+
+      // Put the name on the public parish record too, if it has none yet.
+      //
+      // Filing a return proves who is in charge just as well as the confirm
+      // form does, and without this a parish that went straight to submitting
+      // reads as "no pastor on record" in the directory for ever, even though
+      // the province has the name on every return. The rules only permit this
+      // while the field is empty, so it can never overwrite a confirmed name.
+      if (!parish.pastorName.trim()) {
+        try {
+          await updateDoc(doc(db, COLLECTIONS.parishes, parish.id), {
+            pastorName: pastorName.trim(),
+            updatedAt: serverTimestamp(),
+          })
+        } catch {
+          /* already confirmed by someone else, or refused; the return stands */
+        }
       }
 
       setStatus({ kind: 'saved', parish: parish.name, date, attendance: count })

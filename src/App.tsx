@@ -5,10 +5,12 @@ import ProtectedRoute from './components/ProtectedRoute'
 import { Alert } from './components/ui'
 import { firebaseInitError, missingFirebaseConfig } from './lib/firebase'
 import Directory from './pages/Directory'
+import Guide from './pages/Guide'
 import Home from './pages/Home'
 import RegisterParish from './pages/RegisterParish'
 import SubmitAttendance from './pages/SubmitAttendance'
 import AdminsAdmin from './pages/admin/AdminsAdmin'
+import AnnouncementsAdmin from './pages/admin/AnnouncementsAdmin'
 import AttendanceAdmin from './pages/admin/AttendanceAdmin'
 import CompareSundays from './pages/admin/CompareSundays'
 import Dashboard from './pages/admin/Dashboard'
@@ -78,6 +80,7 @@ export default function App() {
         <Route path="submit" element={<SubmitAttendance />} />
         <Route path="register" element={<RegisterParish />} />
         <Route path="directory" element={<Directory />} />
+        <Route path="guide" element={<Guide />} />
       </Route>
 
       <Route path="/admin">
@@ -95,6 +98,7 @@ export default function App() {
           <Route path="parishes/:parishId" element={<ParishDetail />} />
           <Route path="attendance" element={<AttendanceAdmin />} />
           <Route path="compare" element={<CompareSundays />} />
+          <Route path="announcements" element={<AnnouncementsAdmin />} />
           <Route path="admins" element={<AdminsAdmin />} />
         </Route>
       </Route>

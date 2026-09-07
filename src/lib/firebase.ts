@@ -130,6 +130,7 @@ export const COLLECTIONS = {
   attendance: 'attendance',
   admins: 'admins',
   adminInvites: 'adminInvites',
+  announcements: 'announcements',
   /** Doc id is `{parishId}_{date}` — the same id as the return it unlocks. */
   submissionExceptions: 'submissionExceptions',
 } as const

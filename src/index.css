@@ -143,6 +143,53 @@
     }
   }
 
+  /*
+   * Scrolling announcement ticker.
+   *
+   * The track holds the message twice and slides exactly half its width, so the
+   * second copy is in place as the first leaves — a seamless loop with no gap
+   * and no JavaScript.
+   *
+   * Duration is set inline from the message length, because a fixed duration
+   * makes a short notice crawl and a long one race past unread.
+   */
+  .marquee-track {
+    display: inline-flex;
+    white-space: nowrap;
+    will-change: transform;
+    animation: marquee-scroll linear infinite;
+  }
+
+  @keyframes marquee-scroll {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(-50%);
+    }
+  }
+
+  /* Hovering or focusing lets someone actually finish reading it. */
+  .marquee:hover .marquee-track,
+  .marquee:focus-within .marquee-track {
+    animation-play-state: paused;
+  }
+
+  /*
+   * Motion sickness and reading difficulties are both real; moving text is a
+   * known problem for either. Anyone who has asked their device for less motion
+   * gets the message standing still, wrapped normally.
+   */
+  @media (prefers-reduced-motion: reduce) {
+    .marquee-track {
+      animation: none;
+      white-space: normal;
+    }
+    .marquee-track > :last-child {
+      display: none;
+    }
+  }
+
   .no-scrollbar::-webkit-scrollbar {
     display: none;
   }

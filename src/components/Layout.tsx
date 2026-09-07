@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link, NavLink, Outlet } from 'react-router-dom'
+import AnnouncementBar from './AnnouncementBar'
 import { useAuth } from '../context/AuthContext'
 import Logo from './Logo'
 
@@ -8,6 +9,7 @@ const NAV = [
   { to: '/submit', label: 'Submit attendance' },
   { to: '/register', label: 'Confirm your parish' },
   { to: '/directory', label: 'Directory' },
+  { to: '/guide', label: 'Guide' },
 ]
 
 function navClass({ isActive }: { isActive: boolean }) {
@@ -25,6 +27,8 @@ export default function Layout() {
 
   return (
     <div className="flex min-h-screen flex-col">
+      <AnnouncementBar />
+
       <header className="sticky top-0 z-40 border-b border-navy-100 bg-white/90 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
           <Link to="/" onClick={() => setOpen(false)} className="min-w-0">

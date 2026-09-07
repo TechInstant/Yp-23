@@ -18,6 +18,11 @@ const NAV = [
     icon: 'M4 18V9M10 18V5M16 18v-6M3 21h18',
   },
   {
+    to: '/admin/announcements',
+    label: 'Announcements',
+    icon: 'M4 9h6l6-4v14l-6-4H4zM18 9a3 3 0 010 6',
+  },
+  {
     to: '/admin/admins',
     label: 'Admin access',
     icon: 'M12 3l7 4v5c0 4.4-3 8-7 9-4-1-7-4.6-7-9V7z',

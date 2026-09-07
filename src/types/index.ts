@@ -71,3 +71,23 @@ export interface SubmissionException {
   reason: string
   grantedBy: string
 }
+
+/**
+ * A message from the province to the parishes.
+ *
+ * Visible on every public page between `showFrom` and `showUntil`, then it
+ * stops on its own — a reminder to file today's return is noise by Tuesday,
+ * and nobody should have to remember to take it down.
+ */
+export interface Announcement {
+  id: string
+  message: string
+  /** YYYY-MM-DD, inclusive. */
+  showFrom: string
+  /** YYYY-MM-DD, inclusive. */
+  showUntil: string
+  /** Scrolling ticker rather than a still banner. */
+  marquee: boolean
+  createdBy: string
+  createdAt?: unknown
+}

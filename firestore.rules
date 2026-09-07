@@ -270,6 +270,38 @@ service cloud.firestore {
      * Readable by anyone: the submission form has to know whether to offer the
      * date, and the document says only "this parish may file for this Sunday".
      */
+    /**
+     * Notices the province puts in front of the parishes.
+     *
+     * Any admin may post one — a reminder on the morning of a service is
+     * routine, not something to queue behind a super admin. Public to read,
+     * because the whole point is that pastors see it without signing in.
+     *
+     * Visibility is a date window rather than an on/off flag, so a "file your
+     * return today" notice stops on its own instead of scrolling across the
+     * page until somebody remembers to remove it.
+     */
+    match /announcements/{announcementId} {
+      allow read: if true;
+
+      allow create, update: if isAdmin()
+                            && incoming().keys().hasOnly([
+                                 'message', 'showFrom', 'showUntil', 'marquee',
+                                 'createdBy', 'createdAt'
+                               ])
+                            && incoming().message is string
+                            && incoming().message.trim().size() >= 2
+                            && incoming().message.size() <= 300
+                            && incoming().showFrom is string
+                            && incoming().showFrom.matches('^\\d{4}-\\d{2}-\\d{2}$')
+                            && incoming().showUntil is string
+                            && incoming().showUntil.matches('^\\d{4}-\\d{2}-\\d{2}$')
+                            && incoming().showUntil >= incoming().showFrom
+                            && incoming().marquee is bool;
+
+      allow delete: if isAdmin();
+    }
+
     match /submissionExceptions/{exceptionId} {
       allow read: if true;
 

@@ -22,5 +22,6 @@ transparent PNG, drop the `onDark` chip styling in `BrandMark` for a cleaner loo
 ## Still worth adding
 
 - `public/brand/og-image.png` (1200×630) for WhatsApp and Facebook link previews.
-- A `favicon.png` cut from the seal, if you prefer it to the drawn
-  `public/favicon.svg` currently referenced by `index.html`.
+- The site icon is , the official seal, referenced
+  from . A version cropped to the dove would be sharper at 16px
+  if the ring lettering matters at tab size.

@@ -3,16 +3,13 @@
   <head>
     <meta charset="UTF-8" />
     <!--
-      The official RCCG seal. Listed after the SVG so it wins where both are
-      understood; the SVG stays as a fallback for anything that cannot take a
-      PNG icon.
+      The official RCCG seal, and the only icon declared.
 
-      Note the seal carries fine lettering around its ring, which will not be
-      legible at 16px in a browser tab. The dove and the colours still read,
-      and it is unmistakably the church's mark, which is what a favicon is for.
+      There was a hand-drawn SVG here as well. That was a mistake: a browser
+      that understands SVG icons prefers them over PNG whatever the order, so
+      the placeholder was overriding the real seal rather than backing it up.
     -->
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="icon" type="image/png" sizes="448x448" href="/rccg-logo.png" />
+    <link rel="icon" type="image/png" href="/rccg-logo.png" />
     <link rel="apple-touch-icon" href="/rccg-logo.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#16225A" />

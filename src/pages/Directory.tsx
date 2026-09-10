@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Spinner, StatusBadge } from '../components/ui'
+import { SkeletonList, StatusBadge } from '../components/ui'
 import { useParishes } from '../hooks/useParishes'
 
 /**
@@ -22,7 +22,7 @@ export default function Directory() {
 
   const confirmed = parishes.filter((p) => p.pastorName.trim()).length
 
-  if (loading) return <Spinner label="Loading the directory…" />
+  if (loading) return <SkeletonList rows={6} className="mt-6" />
 
   return (
     <div className="space-y-6">

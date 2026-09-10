@@ -15,7 +15,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
-import { Alert, Spinner, StatTile } from '../../components/ui'
+import { Alert, SkeletonChart, SkeletonTiles, StatTile } from '../../components/ui'
 import { useAttendance } from '../../hooks/useAttendance'
 import { useIsNarrow } from '../../hooks/useIsNarrow'
 import { useParishes } from '../../hooks/useParishes'
@@ -194,7 +194,7 @@ export default function Dashboard() {
       )}
 
       {loading ? (
-        <Spinner label="Crunching the returns…" />
+        <div className="space-y-6"><SkeletonTiles /><SkeletonChart className="h-80" /></div>
       ) : records.length === 0 ? (
         <Alert tone="info" title="No returns in this range yet">
           Once parishes start submitting on{' '}

@@ -290,3 +290,83 @@ export function StatusBadge({ status }: { status: string }) {
   }
   return <span className={`badge ${styles[status] ?? styles.archived}`}>{status}</span>
 }
+
+/**
+ * Placeholder blocks shaped like the content that is coming.
+ *
+ * A spinner says "wait"; a skeleton says what you are waiting for, and the
+ * layout does not jump when the data lands because the space is already
+ * reserved. Marked aria-hidden with a live-region label alongside, so a screen
+ * reader hears "Loading" once instead of a description of grey rectangles.
+ */
+export function Skeleton({
+  className = '',
+  style,
+}: {
+  className?: string
+  style?: React.CSSProperties
+}) {
+  return (
+    <div className={`animate-pulse rounded bg-navy-100 ${className}`} style={style} aria-hidden />
+  )
+}
+
+export function SkeletonText({ lines = 3, className = '' }: { lines?: number; className?: string }) {
+  return (
+    <div className={`space-y-2 ${className}`} aria-hidden>
+      {Array.from({ length: lines }, (_, i) => (
+        <Skeleton
+          key={i}
+          // The last line stops short, the way a real paragraph does.
+          className={`h-3.5 ${i === lines - 1 ? 'w-2/3' : 'w-full'}`}
+        />
+      ))}
+    </div>
+  )
+}
+
+/** A loading stand-in for a list of cards. */
+export function SkeletonList({ rows = 4, className = '' }: { rows?: number; className?: string }) {
+  return (
+    <div className={`space-y-3 ${className}`} role="status" aria-label="Loading">
+      {Array.from({ length: rows }, (_, i) => (
+        <div key={i} className="card p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0 flex-1 space-y-2">
+              <Skeleton className="h-4 w-1/2" />
+              <Skeleton className="h-3 w-1/3" />
+            </div>
+            <Skeleton className="h-7 w-12 shrink-0" />
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+/** A loading stand-in for a row of stat tiles. */
+export function SkeletonTiles({ count = 4 }: { count?: number }) {
+  return (
+    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4" role="status" aria-label="Loading">
+      {Array.from({ length: count }, (_, i) => (
+        <div key={i} className="card space-y-3 p-5">
+          <Skeleton className="h-3 w-24" />
+          <Skeleton className="h-8 w-20" />
+          <Skeleton className="h-3 w-28" />
+        </div>
+      ))}
+    </div>
+  )
+}
+
+/** A loading stand-in for a chart, sized so the page does not jump. */
+export function SkeletonChart({ className = 'h-64' }: { className?: string }) {
+  return (
+    <div className={`card flex items-end gap-2 p-5 ${className}`} role="status" aria-label="Loading">
+      {/* Uneven heights so it reads as a chart rather than a loading bar. */}
+      {[45, 70, 55, 85, 60, 75, 50, 90].map((h, i) => (
+        <Skeleton key={i} className="flex-1" style={{ height: `${h}%` }} />
+      ))}
+    </div>
+  )
+}

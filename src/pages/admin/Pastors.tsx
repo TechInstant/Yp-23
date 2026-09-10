@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Alert, EmptyState, Spinner, StatTile } from '../../components/ui'
+import { Alert, EmptyState, SkeletonList, StatTile } from '../../components/ui'
 import { useAttendance } from '../../hooks/useAttendance'
 import { useParishContacts } from '../../hooks/useParishContacts'
 import { useParishes } from '../../hooks/useParishes'
@@ -80,7 +80,7 @@ export default function Pastors() {
     )
   }
 
-  if (loading || contactsLoading) return <Spinner label="Loading contacts…" />
+  if (loading || contactsLoading) return <SkeletonList rows={6} />
 
   return (
     <div className="space-y-6">

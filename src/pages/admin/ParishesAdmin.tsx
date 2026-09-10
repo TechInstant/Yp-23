@@ -10,7 +10,7 @@ import {
   updateDoc,
   writeBatch,
 } from 'firebase/firestore'
-import { Alert, EmptyState, Field, Modal, Spinner, StatusBadge } from '../../components/ui'
+import { Alert, EmptyState, Field, Modal, SkeletonList, StatusBadge } from '../../components/ui'
 import { DIRECTORY_COUNT, flattenDirectory } from '../../data/provinceStructure'
 import { useAuth } from '../../context/AuthContext'
 import { useParishContacts } from '../../hooks/useParishContacts'
@@ -369,7 +369,7 @@ export default function ParishesAdmin() {
     }
   }
 
-  if (loading) return <Spinner label="Loading parishes…" />
+  if (loading) return <SkeletonList rows={6} />
 
   return (
     <div className="space-y-6">

@@ -10,7 +10,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
-import { Spinner } from './ui'
+import { SkeletonChart, SkeletonTiles } from './ui'
 import { useIsNarrow } from '../hooks/useIsNarrow'
 import { parishSeries } from '../lib/analytics'
 import { AXIS_TICK, CHART, TOOLTIP_STYLE } from '../lib/chartTheme'
@@ -132,7 +132,7 @@ export default function ParishTrend({ parishes }: { parishes: Parish[] }) {
       </label>
 
       {!parishId ? null : loading ? (
-        <Spinner label="Loading your Sundays…" />
+        <div className="mt-5 space-y-4"><SkeletonTiles count={4} /><SkeletonChart className="h-60 sm:h-72" /></div>
       ) : !summary ? (
         <p className="mt-5 rounded-lg bg-navy-50 px-4 py-6 text-center text-sm text-navy-500">
           {parish?.name} has not submitted any attendance yet. Your trend appears here once you

@@ -22,6 +22,6 @@ transparent PNG, drop the `onDark` chip styling in `BrandMark` for a cleaner loo
 ## Still worth adding
 
 - `public/brand/og-image.png` (1200×630) for WhatsApp and Facebook link previews.
-- The site icon is , the official seal, referenced
-  from . A version cropped to the dove would be sharper at 16px
-  if the ring lettering matters at tab size.
+- The site icon is `public/rccg-logo.png`, the official seal, referenced from
+  `index.html`. A version cropped to the dove would be sharper at 16px if the
+  ring lettering matters at tab size.

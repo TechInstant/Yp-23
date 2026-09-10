@@ -155,6 +155,59 @@ export default function ParishesAdmin() {
    * the signed-in admin session — no service-account key needed, which matters
    * because org policy can block key creation entirely.
    */
+  /**
+   * Parishes whose pastor is known from a return but missing from the public
+   * record.
+   *
+   * Before confirmation was required, filing a return wrote the pastor's name
+   * to the contact card only. The admin screens all fall back to that card, so
+   * those parishes look confirmed here while the public directory and the
+   * confirm form still show them as unclaimed, and under the new rule they
+   * cannot file at all. This finds them so the gap can be closed.
+   */
+  const recoverable = useMemo(
+    () =>
+      parishes.filter(
+        (p) =>
+          p.status !== 'archived' &&
+          !p.pastorName.trim() &&
+          (contacts[p.id]?.pastorName ?? '').trim().length >= 2,
+      ),
+    [parishes, contacts],
+  )
+
+  async function restoreNames() {
+    if (
+      !window.confirm(
+        `Copy ${recoverable.length} pastor name${recoverable.length === 1 ? '' : 's'} from their returns onto the parish record?\n\n` +
+          'These parishes already told us who is in charge when they filed. This lets them file again and shows them as confirmed in the directory.',
+      )
+    )
+      return
+
+    setSaving(true)
+    try {
+      for (let i = 0; i < recoverable.length; i += 400) {
+        const batch = writeBatch(db)
+        for (const p of recoverable.slice(i, i + 400)) {
+          batch.update(doc(db, COLLECTIONS.parishes, p.id), {
+            pastorName: (contacts[p.id]?.pastorName ?? '').trim(),
+            updatedAt: serverTimestamp(),
+          })
+        }
+        await batch.commit()
+      }
+      setMessage({
+        tone: 'success',
+        text: `Restored ${recoverable.length} pastor name${recoverable.length === 1 ? '' : 's'}.`,
+      })
+    } catch (err) {
+      setMessage({ tone: 'error', text: err instanceof Error ? err.message : String(err) })
+    } finally {
+      setSaving(false)
+    }
+  }
+
   async function loadDirectory() {
     const known = new Set(parishes.map((p) => p.name.trim().toUpperCase()))
     const missing = flattenDirectory().filter((p) => !known.has(p.name.toUpperCase()))
@@ -363,6 +416,17 @@ export default function ParishesAdmin() {
               disabled={saving}
             >
               Load province directory
+            </button>
+          )}
+          {recoverable.length > 0 && (
+            <button
+              type="button"
+              className="btn-gold btn-sm"
+              onClick={() => void restoreNames()}
+              disabled={saving}
+              title="These parishes named their pastor when they filed a return, but the name never reached the public record."
+            >
+              Restore {recoverable.length} pastor name{recoverable.length === 1 ? '' : 's'}
             </button>
           )}
           <button type="button" className="btn-ghost btn-sm" onClick={exportCsv}>

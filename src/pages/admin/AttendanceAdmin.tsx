@@ -2,7 +2,7 @@ import { useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { deleteDoc, doc, serverTimestamp, setDoc, updateDoc, writeBatch } from 'firebase/firestore'
 import SundayPicker from '../../components/SundayPicker'
-import { Alert, EmptyState, Field, Modal, SkeletonList, Spinner } from '../../components/ui'
+import { Alert, EmptyState, Field, Modal, SkeletonList } from '../../components/ui'
 import { useAuth } from '../../context/AuthContext'
 import { useAttendance } from '../../hooks/useAttendance'
 import { useParishes } from '../../hooks/useParishes'
@@ -173,7 +173,7 @@ export default function AttendanceAdmin() {
     )
   }
 
-  if (parishesLoading) return <Spinner label="Loading…" />
+  if (parishesLoading) return <SkeletonList rows={5} />
 
   return (
     <div className="space-y-6">

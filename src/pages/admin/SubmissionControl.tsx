@@ -1,4 +1,4 @@
-import { Alert, Spinner } from '../../components/ui'
+import { Alert, SkeletonForm } from '../../components/ui'
 import SubmissionCutoff from '../../components/SubmissionCutoff'
 import SubmissionExceptions from '../../components/SubmissionExceptions'
 import { useAuth } from '../../context/AuthContext'
@@ -28,7 +28,7 @@ export default function SubmissionControl() {
     )
   }
 
-  if (loading) return <Spinner label="Loading parishes…" />
+  if (loading) return <SkeletonForm fields={3} />
 
   const cutoffWat = utcToWatMinutes(closesAtUtcMinutes)
 

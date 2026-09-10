@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { addDoc, collection, deleteDoc, doc, serverTimestamp } from 'firebase/firestore'
-import { Alert, Field, Spinner } from '../../components/ui'
+import { Alert, Field, SkeletonForm } from '../../components/ui'
 import { useAuth } from '../../context/AuthContext'
 import { useAnnouncements } from '../../hooks/useAnnouncements'
 import { COLLECTIONS, db } from '../../lib/firebase'
@@ -91,7 +91,7 @@ export default function AnnouncementsAdmin() {
     }
   }
 
-  if (loading) return <Spinner label="Loading announcements…" />
+  if (loading) return <SkeletonForm fields={3} />
 
   return (
     <div className="space-y-6">

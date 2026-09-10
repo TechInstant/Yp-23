@@ -11,7 +11,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
-import { Alert, Spinner, StatTile, StatusBadge } from '../../components/ui'
+import { Alert, SkeletonChart, SkeletonTiles, StatTile, StatusBadge } from '../../components/ui'
 import { parishSeries } from '../../lib/analytics'
 import { useParishContacts } from '../../hooks/useParishContacts'
 import { useParishes } from '../../hooks/useParishes'
@@ -78,7 +78,7 @@ export default function ParishDetail() {
     }
   }, [records, series])
 
-  if (parishesLoading || loading) return <Spinner label="Loading parish record…" />
+  if (parishesLoading || loading) return <><SkeletonTiles /><SkeletonChart className="mt-6 h-72" /></>
 
   if (!parish) {
     return (

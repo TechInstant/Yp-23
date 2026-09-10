@@ -370,3 +370,32 @@ export function SkeletonChart({ className = 'h-64' }: { className?: string }) {
     </div>
   )
 }
+
+/**
+ * A loading stand-in for a form: a heading, then labelled fields, then a button.
+ *
+ * Reserving the real shape matters most here. These are the two pages a pastor
+ * opens on a Sunday, and a form that pops into place under a thumb already
+ * moving toward it is how the wrong field gets tapped.
+ */
+export function SkeletonForm({ fields = 4 }: { fields?: number }) {
+  return (
+    <div className="space-y-6" role="status" aria-label="Loading">
+      <div className="space-y-2">
+        <Skeleton className="h-7 w-2/3 max-w-xs" />
+        <Skeleton className="h-4 w-full max-w-md" />
+      </div>
+      <div className="card space-y-5 p-5 sm:p-6">
+        {Array.from({ length: fields }, (_, i) => (
+          <div key={i} className="space-y-2">
+            <Skeleton className="h-3.5 w-28" />
+            <Skeleton className="h-11 w-full" />
+          </div>
+        ))}
+        <div className="border-t border-navy-100 pt-5">
+          <Skeleton className="h-11 w-full sm:w-40" />
+        </div>
+      </div>
+    </div>
+  )
+}

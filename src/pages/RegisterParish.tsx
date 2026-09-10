@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { addDoc, collection, doc, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore'
-import { Alert, Field, Spinner } from '../components/ui'
+import { Alert, Field, SkeletonForm } from '../components/ui'
 import { useParishes } from '../hooks/useParishes'
 import { COLLECTIONS, db } from '../lib/firebase'
 
@@ -130,7 +130,7 @@ export default function RegisterParish() {
     }
   }
 
-  if (loading) return <Spinner label="Loading the province directory…" />
+  if (loading) return <SkeletonForm fields={4} />
 
   return (
     <div className="mx-auto max-w-xl space-y-6">

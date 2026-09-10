@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore'
-import { Alert, Field, Spinner } from '../components/ui'
+import { Alert, Field, SkeletonForm } from '../components/ui'
 import { useParishes } from '../hooks/useParishes'
 import { useSubmissionExceptions } from '../hooks/useSubmissionExceptions'
 import { useSubmissionSettings } from '../hooks/useSubmissionSettings'
@@ -206,7 +206,7 @@ export default function SubmitAttendance() {
     }
   }
 
-  if (loading) return <Spinner label="Loading parishes…" />
+  if (loading) return <SkeletonForm fields={5} />
   if (error) {
     return (
       <Alert tone="error" title="Could not load the parish list">

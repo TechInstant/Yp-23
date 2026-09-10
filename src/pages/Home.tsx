@@ -12,7 +12,7 @@ import {
 import { BrandMark } from '../components/Logo'
 import ParishTrend from '../components/ParishTrend'
 import { useAuth } from '../context/AuthContext'
-import { Spinner } from '../components/ui'
+import { Skeleton, SkeletonChart } from '../components/ui'
 import { useAttendance } from '../hooks/useAttendance'
 import { useParishes } from '../hooks/useParishes'
 import { totalsBySunday } from '../lib/analytics'
@@ -158,7 +158,11 @@ export default function Home() {
         </div>
 
         {loading ? (
-          <Spinner />
+          <div className="mt-5 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {Array.from({ length: 6 }, (_, i) => (
+              <Skeleton key={i} className="h-11" />
+            ))}
+          </div>
         ) : uploaded.length === 0 ? (
           <p className="mt-6 rounded-lg bg-navy-50 px-4 py-6 text-center text-sm text-navy-500">
             {started
@@ -215,7 +219,7 @@ export default function Home() {
         </div>
 
         {loading ? (
-          <Spinner />
+          <SkeletonChart className="mt-6 h-64" />
         ) : (
           <div className="mt-6 h-64">
             <ResponsiveContainer width="100%" height="100%">

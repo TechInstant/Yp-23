@@ -8,7 +8,7 @@ import {
   setDoc,
   updateDoc,
 } from 'firebase/firestore'
-import { Alert, EmptyState, Field, Spinner } from '../../components/ui'
+import { Alert, EmptyState, Field, SkeletonList } from '../../components/ui'
 import { useAuth, type AdminRole } from '../../context/AuthContext'
 import { COLLECTIONS, db } from '../../lib/firebase'
 
@@ -180,7 +180,7 @@ export default function AdminsAdmin() {
     )
   }
 
-  if (loading) return <Spinner label="Loading the admin list…" />
+  if (loading) return <SkeletonList rows={4} />
 
   return (
     <div className="space-y-6">

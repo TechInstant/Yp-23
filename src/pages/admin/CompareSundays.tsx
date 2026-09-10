@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Alert, EmptyState, Spinner, StatTile } from '../../components/ui'
+import { Alert, EmptyState, SkeletonForm, SkeletonList, SkeletonTiles, StatTile } from '../../components/ui'
 import { useAttendanceOnDates } from '../../hooks/useAttendanceOnDates'
 import { useParishes } from '../../hooks/useParishes'
 import { downloadCsv, toCsv } from '../../lib/csv'
@@ -156,7 +156,7 @@ export default function CompareSundays() {
     )
   }
 
-  if (parishesLoading) return <Spinner label="Loading churches…" />
+  if (parishesLoading) return <SkeletonForm fields={2} />
 
   const sameDay = earlier === later
 
@@ -193,7 +193,7 @@ export default function CompareSundays() {
       {error && <Alert tone="error">{error}</Alert>}
 
       {loading ? (
-        <Spinner label="Loading both Sundays…" />
+        <div className="space-y-4"><SkeletonTiles /><SkeletonList rows={4} /></div>
       ) : totals.earlierCount === 0 && totals.laterCount === 0 ? (
         <EmptyState title="Neither Sunday has any returns">
           Nothing was filed on {formatSundayLong(earlier)} or {formatSundayLong(later)}.
